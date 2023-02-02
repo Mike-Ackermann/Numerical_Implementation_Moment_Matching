@@ -1,6 +1,7 @@
-%DELETE THIS FILE
+%This is a script to run Algorithm 1 (Implemented in
+%Functions\CalculateTFValues).
 
-%Assumes system matrices A,B,C,D
+
 fs = 1e4;%1e3?
 Ts = 1/fs;
 t_end = 10;
