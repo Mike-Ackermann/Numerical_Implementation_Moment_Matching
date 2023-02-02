@@ -1,4 +1,6 @@
 function [val,LS] = check_interp(s,U,n)
+% NEED TO CHANGE TO MATCH PAPER
+
 %Checks interpolation conditions (Modified conditions from Thm 13 in
 %Burohman, Besselink, Scherpen 2020
 
@@ -7,7 +9,7 @@ function [val,LS] = check_interp(s,U,n)
 %LS is boolean for if we can only compute a Least Squares solution
 
 %%%%% INPUTS %%%%%%
-%U is the orthogonal subspace for teh current data window
+%U is the orthogonal subspace for the current data window
 %n is order of system
 %s is the interpolation point
 

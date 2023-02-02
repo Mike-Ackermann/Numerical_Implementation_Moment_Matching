@@ -1,4 +1,4 @@
-function RHS = Mk_RHS(k,Mj,n,s)
+function RHS = Make_RHS(k,Mj,n,s)
 %Makes the right hand side of the linear system given in equation 30 from 
 %Burohman, Besselink, Scherpen 2020.  Used to calculate transfer function
 %derivatives directly from data.

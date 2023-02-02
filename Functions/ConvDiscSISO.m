@@ -1,18 +1,15 @@
 function [A, B, C, D] = ConvDiscSISO(Ac,Bc,Cc,Dc,Ts,IN,OUT)
 
-%converts any system to a discrete time SISO system.  The converted system
-%does NOT nessesarily have the same behavior as the original system, only
-%use for testing purposes
-
-%Input D is assumed to be 0
+%converts a MIMO continuous system to a SISO discrete system.
+% Uses MATLAB toolbox for conversion from continuous to discrete.  If not
+% available, use any backwards stable discretization scheme (e.g. Implicit
+% Euler)
 
 %Inputs are any stable system matricies
 %OPTIONAL INPUTS:
 %    IN: input dimention
 %    OUT: Output dimension
 %Outputs are a related system that is discrete time and SISO
-
-
 
 Ac = full(Ac);
 Bc = full(Bc);
@@ -25,7 +22,7 @@ CTsys = max(abs(eigs(Ac))) > 1;
 needToChange = CTsys || num_in > 1 || num_out > 1;
 
 %if 6 inputs are supplied, we select the requested input-output dimentions.
-%IF 4 inputs are supplied, default to input_dim = output_dim = 1
+%if 4 inputs are supplied, default to input_dim = output_dim = 1
 if nargin == 6
     input_dim = IN;
     output_dim = OUT;

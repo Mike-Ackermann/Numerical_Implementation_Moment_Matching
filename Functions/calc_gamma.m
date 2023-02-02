@@ -1,13 +1,8 @@
-
-function gamma_sig = calc_gamma_UC(s,n,der_order)
+function gamma_sig = calc_gamma(s,n,der_order)
 %s is interpolation point
 %n is order of system
 %der_order is order of derivative.
-%it is assumed that s is within some delta of the unit circle, so that s^n
-%does not blow up.
 
-
-%if calulating M0, just put s^(0:n) in a vector.
 if der_order == 0
     exponents = 0:n;
     gamma_sig = (s.^exponents).';
