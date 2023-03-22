@@ -3,20 +3,19 @@
 
 %% construct data to use to find estimates of transfer function values
 fprintf('Generating data...\n')
-load Penzl_disc.mat
+load Rand1000.mat
 
-fs = 1e4;%1e3?
+fs = 1e3;%1e3?
 Ts = 1/fs;
 t_end = 1;
 
 t_eval = 0:Ts:t_end;
 T = length(t_eval);
-%U = FiltNoise(fs,t_end);
-%Y = runDTSys(A,B,C,D,U,t_eval);
-load BestInput_Penzl.mat
+U = randn(T,1);
+Y = runDTSys(A,B,C,D,U,t_eval);
 
-red = 14;
-freqs = logspace(-4,log10(.99*pi),red);
+red = 100;
+freqs = logspace(-2,log10(.99*pi),4*red);
 %freqs = [freqs 1.5 .99*pi];
 num = length(freqs);
 r = 1; % radius of points
@@ -26,7 +25,7 @@ clear opts
 opts.tol = 10^(-1);
 opts.der_order = 1;
 opts.num_est = 10;
-opts.n = 300; %set n to 300 to follow section on estimating moments
+%opts.n = 300; %set n to 300 to follow section on estimating moments
 
 %% Calulate Transfer Function Estimates
 fprintf('Calculating frequency data\n')
@@ -68,10 +67,10 @@ eval_freqs = eval_freqs(idx);
 
 opts2.spy1=0; opts2.spy2=0; opts2.cmplx_ss = 0;
 n_iter = 100;
-tolVF = 1e-10;
+tolVF = 1e-5;
 weights = ones(1,num*2); %dont weight
 %initl_poles = 1*exp((1:nmax)*2*pi*1i/nmax); %set initial poles inside upper unit circle
-initl_poles = exp(1i*logspace(-3,pi,nmax/2));
+initl_poles = exp(1i*linspace(10^(-3),.9*pi,nmax/2));
 initl_poles = [initl_poles, conj(initl_poles)];
 initl_poles = sort(initl_poles,'ComparisonMethod','real');
 count_VF = 0;
@@ -213,11 +212,11 @@ ax.LineWidth = Default_LW * 2;
 %change font size
 ax.FontSize = 14;
 %specify tick location and labels
-xticks([1e-4,1e-3,1e-2,1e-1,1])
-xticklabels({'10^{-4}','10^{-3}','10^{-2}','10^{-1}','1'})
+xticks([1e-2,1e-1,pi])
+xticklabels({'10^{-2}','10^{-1}','\pi'})
 xlabel('$\omega$','interpreter','latex','fontsize',25)
 %set limits of plot
-xlim([1e-4,1])
+xlim([1e-2,pi])
 %labels
 ylabel('$|\hat H_r^x(e^{\mathbf i \omega})|$','interpreter','latex','fontsize',20)
 % xlabel('$r$','interpreter','latex','fontsize',30)
@@ -246,11 +245,11 @@ ax.LineWidth = Default_LW * 2;
 ax.FontSize = 14;
 %specify tick location and labels
 xticks([freqs_plt(1),1e-1,pi])
-xticks([1e-4,1e-3,1e-2,1e-1,1])
-xticklabels({'10^{-4}','10^{-3}','10^{-2}','10^{-1}','1'})
+xticks([1e-2,1e-1,pi])
+xticklabels({'10^{-2}','10^{-1}','\pi'})
 %set limits of plot
 xlabel('$\omega$','interpreter','latex','fontsize',25)
-xlim([1e-4,pi])
+xlim([1e-2,pi])
 %labels
 ylabel('$|H(e^{\mathbf i \omega})-\hat H_r^x(e^{\mathbf i \omega})|/|H(e^{\mathbf i \omega})|$','interpreter','latex','fontsize',20)
 % xlabel('$r$','interpreter','latex','fontsize',30)
@@ -279,11 +278,11 @@ ax.LineWidth = Default_LW * 2;
 %change font size
 ax.FontSize = 14;
 %specify tick location and labels
-xticks([1e-4,1e-3,1e-2,1e-1,1])
-xticklabels({'10^{-4}','10^{-3}','10^{-2}','10^{-1}','1'})
+xticks([1e-2,1e-1,pi])
+xticklabels({'10^{-2}','10^{-1}','\pi'})
 xlabel('$\omega$','interpreter','latex','fontsize',25)
 %set limits of plot
-xlim([1e-4,pi])
+xlim([1e-2,pi])
 %labels
 ylabel('$|\tilde H_r^x(e^{\mathbf i \omega})|$','interpreter','latex','fontsize',20)
 % xlabel('$r$','interpreter','latex','fontsize',30)
@@ -311,11 +310,11 @@ ax.LineWidth = Default_LW * 2;
 %change font size
 ax.FontSize = 14;
 %specify tick location and labels
-xticks([1e-4,1e-3,1e-2,1e-1,1])
-xticklabels({'10^{-4}','10^{-3}','10^{-2}','10^{-1}','1'})
+xticks([1e-2,1e-1,pi])
+xticklabels({'10^{-2}','10^{-1}','\pi'})
 xlabel('$\omega$','interpreter','latex','fontsize',25)
 %set limits of plot
-xlim([1e-4,pi])
+xlim([1e-2,pi])
 %labels
 ylabel('$|H(e^{\mathbf i \omega})-\tilde H_r^x(e^{\mathbf i \omega})|/|H(e^{\mathbf i \omega})|$','interpreter','latex','fontsize',20)
 % xlabel('$r$','interpreter','latex','fontsize',30)
@@ -377,5 +376,5 @@ H2_err_mat = [H2_Low, H2_HerLow, H2_VF;...
 %                Hinf_HerLowt, Hinf_VFt, Hinf_AAAt;...
 %                Hinf_dist_HerLow, Hinf_dist_VF, Hinf_dist_AAA];
 
-%matrix2latex(H2_err_mat, 'H2_err_Penzl.txt')
+matrix2latex(H2_err_mat, 'H2_err_Synth.txt')
 %matrix2latex(Hinf_err_mat, 'Hinf_err_RandEx1_correct.txt')

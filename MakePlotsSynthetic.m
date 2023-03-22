@@ -1,6 +1,6 @@
 % Script to make plots for the synthetic random example
 
-load RandImag1000.mat
+load Rand1000.mat
 
 fs = 1e3;%1e3?
 Ts = 1/fs;
@@ -67,8 +67,8 @@ figure;
 loglog(freqs,abs(H_true),'LineWidth',2)
 hold on
 loglog(freqs,abs(Hz(:,1)),'--','LineWidth',2)
-legend('True $H(e^{\mathbf i \omega})$',...
-    'Learned $H(e^{\mathbf i \omega})$','Interpreter',...
+legend('True $|H(e^{\mathbf i \omega})|$',...
+    'Learned $|H(e^{\mathbf i \omega})|$','Interpreter',...
     'latex','Location','northwest')
 xlim([10^(-2),pi])
 ax = gca;
@@ -78,6 +78,7 @@ ax.TickLength = Default_TW * 2;
 ax.LineWidth = Default_LW * 2;
 ax.FontSize = 16;
 xlabel('$\omega$','Interpreter','latex','FontSize',20)
+ylabel('Magnitude','Interpreter','latex','FontSize',20)
 
 %plot derivative estimates on top of true
 figure;
