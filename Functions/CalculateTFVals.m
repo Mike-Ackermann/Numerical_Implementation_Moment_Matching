@@ -1,4 +1,5 @@
-function [Hs,n_std_Hs,cond_nums,residuals,opts] = ...
+
+function [Hs,n_std_Hs,cond_nums,residuals,LS_vec,opts] = ...
     CalculateTFVals(U,Y,z_vec,opts)
 % Finds values (and derivatives) of underlying dynamical system that
 % produces output Y given input U.
@@ -30,6 +31,7 @@ def.der_order = 0;
 def.num_est = 10;
 def.n = nan;
 def.t0 = 1;
+def.W = nan;
 if nargin<4
     opts=def;
 else
@@ -60,22 +62,26 @@ T = length(U);
 
 
 %% Precompute Orthogonal Subspaces
-num = length(z_vec);
-t0 = opts.t0;
-num_skip = floor((T-t-t0)/num_est);
-%cell array for storing the orthogonal bases for each window
-W_cell = cell(num_est,1);
-count = 1;
-for t_start = t0:num_skip:T-t
-    t_end = t_start + t;
-    U_i = U(t_start:t_end);
-    Y_i = Y(t_start:t_end);
-
-    Hu = HankMat(U_i,n);
-    Hy = HankMat(Y_i,n);
-    W = orth([Hu;Hy]);
-    W_cell{count} = W;
-    count = count + 1;
+if iscell(opts.W)
+    W_cell = opts.W;
+else
+    num = length(z_vec);
+    t0 = opts.t0;
+    num_skip = floor((T-t-t0)/num_est);
+    %cell array for storing the orthogonal bases for each window
+    W_cell = cell(num_est,1);
+    count = 1;
+    for t_start = t0:num_skip:T-t
+        t_end = t_start + t;
+        U_i = U(t_start:t_end);
+        Y_i = Y(t_start:t_end);
+    
+        Hu = HankMat(U_i,n);
+        Hy = HankMat(Y_i,n);
+        W = orth([Hu;Hy]);
+        W_cell{count} = W;
+        count = count + 1;
+    end
 end
 
 %% Actually calculate the transfer function values and derivatives
@@ -84,18 +90,21 @@ Hs = zeros(num,1 + der_order); %stores accepted TF vals and derivatives
 n_std_Hs = zeros(num,1 + der_order); %stores average normalized standard devs
 cond_nums = zeros(num,1); %stores average condition numbers of LS problem (val only)
 residuals = zeros(num,1); %stores the average residual of the LS problem
+LS_vec = false(num,1); %stores if we could solve linear system "exactly"
 for k = 1:num
     z = z_vec(k);
     Mj_est_vec = zeros(num_est,1+der_order); %stores all estimates of val and ders
     cond_vec = zeros(num_est,1); %stores all condition numbers
     res_vec = zeros(num_est,1); %Least Squares residual
-    for current_SS = 1:num_est
+    LS_vec_temp = zeros(num_est,1);
+    parfor current_SS = 1:num_est
         W = W_cell{current_SS}; %get precomputed subspace
         %calculate and store estimates, cond nums, and LS used data
-        [Mj, cond_num,res] = moment_match(z,n,W,der_order);
+        [Mj, cond_num,res,LS] = moment_match(z,n,W,der_order);
         Mj_est_vec(current_SS,:) = Mj.';
         cond_vec(current_SS) = cond_num;
         res_vec(current_SS) = res;
+        LS_vec_temp(current_SS) = LS;
     end
 
     for i = 0:der_order
@@ -104,6 +113,7 @@ for k = 1:num
         thin_data = Mj_est_vec(idx,i+1);
         thin_cond = cond_vec(idx);
         thin_res = res_vec(idx);
+        thin_LS = LS_vec_temp(idx);
         if isempty(thin_data)
             thin_data = NaN;
             thin_cond = NaN;
@@ -121,6 +131,7 @@ for k = 1:num
             thin_data = thin_data(accepted_res);
             thin_res = thin_res(accepted_res);
             thin_cond = thin_cond(accepted_res);
+            LS_vec_temp = LS_vec_temp(accepted_res);
         end
         if isempty(thin_data)
             avg_Mj = NaN;
@@ -138,10 +149,10 @@ for k = 1:num
             avg_res = mean(thin_res);
             cond_nums(k) = avg_cond;
             residuals(k) = avg_res;
+            LS_vec(k) = any(LS_vec_temp); 
             Hs(k,i+1) = avg_Mj;
             n_std_Hs(k,i+1) = std_norm;
         end      
     end
 end
-fprintf('\n')
 

@@ -16,7 +16,7 @@ function [val,LS] = check_interp(s,U,n)
 val = 0;
 LS = 0;
 
-gamma_sig = calc_gamma_UC(s,n,0);
+gamma_sig = calc_gamma(s,n,0);
 gamma_sig = gamma_sig/norm(gamma_sig);
 z = [zeros(n+1,1);gamma_sig];
 b = [gamma_sig;zeros(n+1,1)];

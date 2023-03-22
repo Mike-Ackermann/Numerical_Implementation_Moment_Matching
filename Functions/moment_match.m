@@ -1,4 +1,5 @@
-function [Mj,cond_num,res] = moment_match(s,n,W,k)
+
+function [Mj,cond_num,res,LS] = moment_match(s,n,W,k)
 %Function that performs moment matching.  Original method from
 %Burohman, Besselink, Scherpen 2020.  Modified for numerical
 %implementation.

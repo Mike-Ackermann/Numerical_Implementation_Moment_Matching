@@ -15,13 +15,13 @@ function RHS = Make_RHS(k,Mj,n,s)
 
 
 %calulate the top half of RHS
-gamma_sig_1 = calc_gamma_UC(s,n,k);
+gamma_sig_1 = calc_gamma(s,n,k);
 
 %calculate bottom half of RHS
 gamma_sig_2 = zeros(n+1,1);
 for j = 0:k-1
     gamma_sig_2 = gamma_sig_2...
-        + nchoosek(k,j)*Mj(j+1)*calc_gamma_UC(s,n,k-j);
+        + nchoosek(k,j)*Mj(j+1)*calc_gamma(s,n,k-j);
 end
 
 RHS = [gamma_sig_1;gamma_sig_2];
