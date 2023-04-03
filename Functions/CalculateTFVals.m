@@ -113,7 +113,7 @@ for k = 1:num
         thin_data = Mj_est_vec(idx,i+1);
         thin_cond = cond_vec(idx);
         thin_res = res_vec(idx);
-        thin_LS = LS_vec_temp(idx);
+        %thin_LS = LS_vec_temp(idx);
         if isempty(thin_data)
             thin_data = NaN;
             thin_cond = NaN;
@@ -131,7 +131,9 @@ for k = 1:num
             thin_data = thin_data(accepted_res);
             thin_res = thin_res(accepted_res);
             thin_cond = thin_cond(accepted_res);
-            LS_vec_temp = LS_vec_temp(accepted_res);
+            if i == 0;
+                LS_vec_temp = LS_vec_temp(accepted_res);
+            end
         end
         if isempty(thin_data)
             avg_Mj = NaN;
