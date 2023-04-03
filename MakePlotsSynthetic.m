@@ -9,10 +9,10 @@ t_end = 2;
 [A, B, C, D] = ConvDiscSISO(A,B,C,D,Ts);
 t_eval = 0:Ts:t_end;
 T = length(t_eval);
-U = FiltNoise(fs,t_end);
+U = randn(T,1);
 Y = runDTSys(A,B,C,D,U,t_eval);
 
-num = 100;
+num = 400;
 log_min_freq = -2; %lowest frequency/Ts wanted in frequency range
 freqs = logspace(log_min_freq,log10(.99*pi),num);
 r = 1; % radius of points
@@ -23,13 +23,11 @@ clear opts
 opts.tol = 10^(-1);
 opts.noise = false;
 opts.der_order = 1;
-opts.num_est = 10;
-%opts.n = 450;
-%opts.t0 = 6e4;
-%opts.n = n_true;
+opts.num_est = 20;
+
 %%
 tic
-[Hz,nstd_Hz,cond_nums,residuals,opts] = CalculateTFVals(U,Y,z,opts);
+[Hz,nstd_Hz,cond_nums,residuals,LS_vec,opts] = CalculateTFVals(U,Y,z,opts);
 toc
 %%
 num = length(z);
@@ -40,7 +38,7 @@ H = @(s) C*((s*I-A)\B);
 Hp = @(s) C*((s*I-A)\(-I*((s*I-A)\B)));
 H_true = zeros(num,1);
 Hp_true = zeros(num,1);
-for i = 1:num
+parfor i = 1:num
     H_true(i) = H(z(i));
     Hp_true(i) = Hp(z(i));
 end
@@ -68,7 +66,7 @@ loglog(freqs,abs(H_true),'LineWidth',2)
 hold on
 loglog(freqs,abs(Hz(:,1)),'--','LineWidth',2)
 legend('True $|H(e^{\mathbf i \omega})|$',...
-    'Learned $|H(e^{\mathbf i \omega})|$','Interpreter',...
+    'Recovered $|H(e^{\mathbf i \omega})|$','Interpreter',...
     'latex','Location','northwest')
 xlim([10^(-2),pi])
 ax = gca;
@@ -85,8 +83,8 @@ figure;
 loglog(freqs,abs(Hp_true),'LineWidth',2)
 hold on
 loglog(freqs,abs(Hz(:,2)),'--','LineWidth',2)
-legend('True $H''(e^{\mathbf i \omega})$',...
-    'Learned $H''(e^{\mathbf i \omega})$','Interpreter',...
+legend('True $|H''(e^{\mathbf i \omega})|$',...
+    'Recovered $|H''(e^{\mathbf i \omega})|$','Interpreter',...
     'latex','Location','northwest')
 xlim([10^(-2),pi])
 ax = gca;
@@ -96,6 +94,7 @@ ax.TickLength = Default_TW * 2;
 ax.LineWidth = Default_LW * 2;
 ax.FontSize = 16;
 xlabel('$\omega$','Interpreter','latex','FontSize',20)
+ylabel('Magnitude','Interpreter','latex','FontSize',20)
 
 % Plot error vs standard deviation
 figure;

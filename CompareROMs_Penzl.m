@@ -16,8 +16,9 @@ T = length(t_eval);
 load BestInput_Penzl.mat
 
 red = 14;
-freqs = logspace(-4,log10(.99*pi),red);
-%freqs = [freqs 1.5 .99*pi];
+freqs = logspace(-4,log10(.99*pi),10*red);
+%freqs = logspace(-2.2924,log10(.99*pi),10*red);
+%freqs = logspace(-1,log10(.99*pi),10*red);
 num = length(freqs);
 r = 1; % radius of points
 z = r*exp(1i*freqs);
@@ -36,9 +37,11 @@ toc
 
 %create vectors of input and putput closed under conjugation
 Hz_WC = [Hz; conj(Hz)];
+nstd_WC = [nstd_Hz(:,1); nstd_Hz(:,1)];
 z_WC = [z.';conj(z.')];
 [~,idx] = sort(z_WC,'ComparisonMethod','real');
 Hz_WC = Hz_WC(idx,:);
+nstd_WC = nstd_WC(idx);
 z_WC = z_WC(idx,:);
 
 %Hz_WC = Hz_WC_cheat;
@@ -69,11 +72,18 @@ eval_freqs = eval_freqs(idx);
 opts2.spy1=0; opts2.spy2=0; opts2.cmplx_ss = 0;
 n_iter = 100;
 tolVF = 1e-10;
-weights = ones(1,num*2); %dont weight
+weights = (1./sqrt(sqrt(nstd_WC)))';
+%weights = ones(1,num*2);
 %initl_poles = 1*exp((1:nmax)*2*pi*1i/nmax); %set initial poles inside upper unit circle
-initl_poles = exp(1i*logspace(-3,pi,nmax/2));
+initl_poles = .99*exp(1i*logspace(-3.5,pi,nmax/2));
 initl_poles = [initl_poles, conj(initl_poles)];
 initl_poles = sort(initl_poles,'ComparisonMethod','real');
+%%%%%%%%%%%%%%%
+%initl_poles = .99*exp(1i*logspace(-3.5,-1,floor(nmax/4)));
+%initl_poles = [initl_poles, conj(initl_poles)];
+%initl_poles = [initl_poles, linspace(.9,1,1+nmax/2)];
+%initl_poles = sort(initl_poles,'ComparisonMethod','real');
+%%%%%%%%%%%%%%%
 count_VF = 0;
 converged = false; diverged = false;
 poles = initl_poles;
@@ -109,11 +119,12 @@ end
 %Vector Fitting
 count_VFt = 0;
 converged = false; diverged = false;
+weightst = ones(1,num*2); %dont weight
 polest = initl_poles;
 while ~converged && ~diverged
     count_VFt = count_VFt + 1;
     [SERt,polest,rmserrt,~,~]=...
-        vectfit3_discrete(H_interp_true.',eval_freqs,polest,weights,Ts,opts2);
+        vectfit3_discrete(H_interp_true.',eval_freqs,polest,weightst,Ts,opts2);
     converged = rmserrt < tolVF;
     diverged = count_VFt > n_iter;
 end
@@ -339,15 +350,17 @@ H2_dist_Low = norm(sysd_Low-sysd_Lowt)/norm(sysd_Lowt);
 H2_dist_HerLow = norm(sysd_HerLow-sysd_HerLowt)/norm(sysd_HerLowt);
 H2_dist_VF = norm(sysd_VF-sysd_VFt)/norm(sysd_VFt);
 
-%H_inf from approximate data
-%Hinf_Sysd = norm(sysd,'inf');
-%Hinf_Low = norm(sysd-sysd_Low,'inf')/Hinf_Sysd;
-%Hinf_HerLow = norm(sysd-sysd_HerLow,'inf')/Hinf_Sysd;
-
-
-%H_inf from true data
-%Hinf_Lowt = norm(sysd-sysd_Lowt,'inf')/Hinf_Sysd;
-%Hinf_HerLowt = norm(sysd-sysd_HerLowt,'inf')/Hinf_Sysd;
+% %H_inf from approximate data
+% Hinf_Sysd = norm(sysd,'inf');
+% Hinf_Low = norm(sysd-sysd_Low,'inf')/Hinf_Sysd;
+% Hinf_HerLow = norm(sysd-sysd_HerLow,'inf')/Hinf_Sysd;
+% Hinf_VF = norm(sysd-sysd_VF,'inf')/Hinf_Sysd;
+% 
+% 
+% %H_inf from true data
+% Hinf_Lowt = norm(sysd-sysd_Lowt,'inf')/Hinf_Sysd;
+% Hinf_HerLowt = norm(sysd-sysd_HerLowt,'inf')/Hinf_Sysd;
+% Hinf_VFt = norm(sysd-sysd_VFt,'inf')/Hinf_Sysd;
 
 %H_inf distance of ROM systems
 %Hinf_dist_HerLow = norm(sysd_HerLow-sysd_HerLowt,'inf')/norm(sysd_HerLowt,'inf');
@@ -360,12 +373,12 @@ fprintf('Low: %e, HerLow: %e, VF: %e\n',...
 fprintf('------ H2 FROM TRUE ERRORS ------\n')
 fprintf('Low: %e, HerLow: %e, VF: %e\n',...
     H2_Lowt, H2_HerLowt, H2_VFt)
-%fprintf('------ Hinf FROM APX ERRORS ------\n')
-%fprintf('Low: %f, HerLow: %f, VF: %f, AAA: %f',...
-%    Hinf_Low, Hinf_HerLow, Hinf_VF, Hinf_AAA)
-%fprintf('------ Hinf FROM TRUE ERRORS ------\n')
-%fprintf('Low: %f, HerLow: %f, VF: %f, AAA: %f',...
-%    Hinf_Lowt, Hinf_HerLowt, Hinf_VFt, Hinf_AAAt)
+% fprintf('------ Hinf FROM APX ERRORS ------\n')
+% fprintf('Low: %e, HerLow: %e, VF: %e\n',...
+%     Hinf_Low, Hinf_HerLow, Hinf_VF)
+% fprintf('------ Hinf FROM TRUE ERRORS ------\n')
+% fprintf('Low: %e, HerLow: %e, VF: %e\n',...
+%     Hinf_Lowt, Hinf_HerLowt, Hinf_VFt)
 
 %Matrix of H2 errors for converting to LaTex format
 %exclude loewner because not in thesis

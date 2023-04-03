@@ -18,6 +18,8 @@ freqs = logspace(log_min_freq,log10(.99*pi),num);
 %freqs = sort([freqs, acurate_num]);
 r = 1; % radius of points
 z = r*exp(1i*freqs);
+%w = .1;
+%z = exp(1i*w);
 %flip the interpolation points
 %z = -real(z) + 1i*imag(z);
 %freqs = freqs;
@@ -27,8 +29,8 @@ clear opts
 opts.tol = 10^(-1);
 opts.noise = false;
 opts.der_order = 0;
-opts.num_est = 10;
-%opts.n = 300;
+opts.num_est = 150;
+opts.n = 100;
 %opts.t0 = 6e4;
 %opts.n = n_true;
 %%

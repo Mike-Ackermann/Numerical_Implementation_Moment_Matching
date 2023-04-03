@@ -9,10 +9,11 @@ t_end = 10;
 t_eval = 0:Ts:t_end;
 T = length(t_eval);
 %U = FiltNoise(fs,t_end);
-U = randn(T,1);
-Y = runDTSys(A,B,C,D,U,t_eval);
+%U = randn(T,1);
+%Y = runDTSys(A,B,C,D,U,t_eval);
+load BestInput_Penzl.mat
 
-num = 100;
+num = 140;
 log_min_freq = -4; %lowest frequency/Ts wanted in frequency range
 freqs = logspace(log_min_freq,log10(.99*pi),num);
 r = 1; % radius of points
@@ -22,7 +23,7 @@ clear opts
 opts.tol = 10^(-1);
 opts.noise = false;
 opts.der_order = 0;
-opts.num_est = 10;
+opts.num_est = 20;
 
 %% Plot for n = nhat
 fprintf('Plot for nhat\n')
@@ -46,7 +47,7 @@ H_true(abs(H_true) < 1e-15) = Hz_nhat(abs(H_true) < 1e-15);
 err = abs(Hz_nhat(:,1)-H_true);
 err2 = norm(err);
 err2rel = norm(err)/norm(H_true);
-
+%% plot
 fprintf('2-norm error in TF estimates         : %.5e\n',err2)
 fprintf('Relative 2-norm error in TF estimates: %.5e\n',err2rel)
 if opts.der_order == 1
@@ -63,7 +64,7 @@ loglog(freqs,abs(H_true),'LineWidth',2)
 hold on
 loglog(freqs,abs(Hz_nhat(:,1)),'--','LineWidth',2)
 legend('True $H(e^{\mathbf i \omega})$',...
-    'Learned $H(e^{\mathbf i \omega})$','Interpreter',...
+    'Recovered $H(e^{\mathbf i \omega})$','Interpreter',...
     'latex','Location','northwest')
 xlim([10^(-4),pi])
 ax = gca;
@@ -96,7 +97,7 @@ clear opts
 opts.tol = 10^(-1);
 opts.noise = false;
 opts.der_order = 0;
-opts.num_est = 10;
+opts.num_est = 20;
 
 opts.n = 300;
 
@@ -132,14 +133,14 @@ if opts.der_order == 1
     fprintf('2-norm error in Derivative TF estimates         : %.5e\n',err2D)
     fprintf('Relative 2-norm error in Derivative TF estimates: %.5e\n',err2relD)
 end
-
+%% plot
 %plot value estimates on top of true
 figure;
 loglog(freqs,abs(H_true),'LineWidth',2)
 hold on
 loglog(freqs,abs(Hz_300(:,1)),'--','LineWidth',2)
 legend('True $H(e^{\mathbf i \omega})$',...
-    'Learned $H(e^{\mathbf i \omega})$','Interpreter',...
+    'Recovered $H(e^{\mathbf i \omega})$','Interpreter',...
     'latex','Location','northwest')
 xlim([10^(-4),pi])
 ax = gca;
@@ -152,10 +153,89 @@ xlabel('$\omega$','Interpreter','latex','FontSize',20)
 
 % Plot error vs standard deviation
 figure;
-relerr = abs(Hz_300(:,1)-H_true)./abs(H_true);
-loglog(freqs,relerr,'LineWidth',2)
+relerr_300 = abs(Hz_300(:,1)-H_true)./abs(H_true);
+loglog(freqs,relerr_300,'LineWidth',2)
 hold on
 loglog(freqs,nstd_Hz(:,1),'LineWidth',2)
+legend('$\epsilon_{rel}$','NSTD','Interpreter',...
+    'latex','Location','northwest')
+xlim([10^(-4),pi])
+ax = gca;
+Default_TW = ax.TickLength;
+Default_LW = ax.LineWidth;
+ax.TickLength = Default_TW * 2;
+ax.LineWidth = Default_LW * 2;
+ax.FontSize = 16;
+xlabel('$\omega$','Interpreter','latex','FontSize',20)
+
+%% Up to n = 1006
+
+fprintf('Plot for n = 1006\n')
+clear opts
+opts.tol = 10^(-1);
+opts.noise = false;
+opts.der_order = 1;
+opts.num_est = 10;
+
+opts.n = 1006;
+
+tic
+[Hz_1006,nstd_Hz_1006,cond_nums_1006,residuals_1006,LS_vec_1006,opts] = CalculateTFVals(U,Y,z,opts);
+toc
+%load Data_Files/Penzl1006_data.mat
+
+num = length(z);
+n_true = length(A);
+I = eye(n_true);
+H = @(s) C*((s*I-A)\B);
+Hp = @(s) C*((s*I-A)\(-I*((s*I-A)\B)));
+H_true = zeros(num,1);
+Hp_true = zeros(num,1);
+parfor i = 1:num
+    H_true(i) = H(z(i));
+    Hp_true(i) = Hp(z(i));
+end
+%if close to eps, just set them equal
+H_true(abs(H_true) < 1e-15) = Hz_1006(abs(H_true) < 1e-15);
+
+% Calculate and report error
+err = abs(Hz_1006(:,1)-H_true);
+err2 = norm(err);
+err2rel = norm(err)/norm(H_true);
+
+fprintf('2-norm error in TF estimates         : %.5e\n',err2)
+fprintf('Relative 2-norm error in TF estimates: %.5e\n',err2rel)
+if opts.der_order == 1
+    err_der = abs(Hz_1006(:,2)-Hp_true);
+    err2D = norm(err_der);
+    err2relD = norm(err_der)/norm(Hp_true);
+    fprintf('2-norm error in Derivative TF estimates         : %.5e\n',err2D)
+    fprintf('Relative 2-norm error in Derivative TF estimates: %.5e\n',err2relD)
+end
+%% plot
+%plot value estimates on top of true
+figure;
+loglog(freqs,abs(H_true),'LineWidth',2)
+hold on
+loglog(freqs,abs(Hz_1006(:,1)),'--','LineWidth',2)
+legend('True $H(e^{\mathbf i \omega})$',...
+    'Recovered $H(e^{\mathbf i \omega})$','Interpreter',...
+    'latex','Location','northwest')
+xlim([10^(-4),pi])
+ax = gca;
+Default_TW = ax.TickLength;
+Default_LW = ax.LineWidth;
+ax.TickLength = Default_TW * 2;
+ax.LineWidth = Default_LW * 2;
+ax.FontSize = 16;
+xlabel('$\omega$','Interpreter','latex','FontSize',20)
+
+% Plot error vs standard deviation
+figure;
+relerr_1006 = abs(Hz_1006(:,1)-H_true)./abs(H_true);
+loglog(freqs,relerr_1006,'LineWidth',2)
+hold on
+loglog(freqs,nstd_Hz_1006(:,1),'LineWidth',2)
 legend('$\epsilon_{rel}$','NSTD','Interpreter',...
     'latex','Location','northwest')
 xlim([10^(-4),pi])

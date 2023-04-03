@@ -1,9 +1,11 @@
-%Plots errors in only Loewner, Hermite Loewner, approximations using
-%Estimated TF values.  This is for a chosen, fixed r.
+%Constructs ROMs to the fully discretized heat model and compares 
+% .
 
 %% construct data to use to find estimates of transfer function values
 fprintf('Generating data...\n')
-load Rand1000.mat
+load heat-disc.mat
+A = full(E\A); B = full(E\B); C = full(C);
+D = 0;
 
 fs = 1e3;%1e3?
 Ts = 1/fs;
@@ -14,8 +16,8 @@ T = length(t_eval);
 U = randn(T,1);
 Y = runDTSys(A,B,C,D,U,t_eval);
 
-red = 100;
-freqs = logspace(-2,log10(.99*pi),4*red);
+red = 10;
+freqs = logspace(-4,log10(.99*pi),50*red);
 %freqs = [freqs 1.5 .99*pi];
 num = length(freqs);
 r = 1; % radius of points
@@ -70,7 +72,7 @@ n_iter = 100;
 tolVF = 1e-5;
 weights = ones(1,num*2); %dont weight
 %initl_poles = 1*exp((1:nmax)*2*pi*1i/nmax); %set initial poles inside upper unit circle
-initl_poles = exp(1i*linspace(10^(-3),.9*pi,nmax/2));
+initl_poles = exp(1i*logspace(-1,pi,nmax/2));
 initl_poles = [initl_poles, conj(initl_poles)];
 initl_poles = sort(initl_poles,'ComparisonMethod','real');
 count_VF = 0;
@@ -155,53 +157,37 @@ if max(abs(eig(sysd_HerLowt))) >= 1
 end
 %% Calculate values and errors on unit circle
 fprintf('Calculating errors...\n')
-%construct a random-log spaced distribution between log_min_freq and pi
-%true frequencies interpolated at
-%random frequencies for testing
+%Print errors in learned transfer function values
 freqs_used = freqs/Ts;
-% get points to plot frequency plot from sigma function
-[~,freqs_plot] = sigma(sysd);
-%Calulate frequency responses at random points for ROMs from estimated data
-H_Low = freqresp(sysd_Low,freqs_plot); H_Low = squeeze(H_Low);
-H_HerLow = freqresp(sysd_HerLow,freqs_plot); H_HerLow = squeeze(H_HerLow);
-H_true = freqresp(sysd,freqs_plot); H_true = squeeze(H_true);
-%H_true_used = freqresp(sysd,freqs_used); H_true_used = squeeze(H_true_used);
-H_true_used = H_interp_true;
-H_VF = freqresp(sysd_VF,freqs_plot); H_VF = squeeze(H_VF);
-
-%Calulate frequency responses at random points for ROMs from true data
-H_Lowt = freqresp(sysd_Lowt,freqs_plot); H_Lowt = squeeze(H_Lowt);
-H_HerLowt = freqresp(sysd_HerLowt,freqs_plot); H_HerLowt = squeeze(H_HerLowt);
-H_VFt = freqresp(sysd_VFt,freqs_plot); H_VFt = squeeze(H_VFt);
-%calculate errors.  Cant calculate error of TF estimates because these
-%frequencies don't were not the interpolation frequencies.
-err_Low = abs(H_Low - H_true)./abs(H_true);
-err_HerLow = abs(H_HerLow - H_true)./abs(H_true);
-err_VF = abs(H_VF - H_true)./abs(H_true);
-%ROMs from true data
-err_Lowt = abs(H_Lowt - H_true)./abs(H_true);
-err_HerLowt = abs(H_HerLowt - H_true)./abs(H_true);
-err_VFt = abs(H_VFt - H_true)./abs(H_true);
-% Error in learned frequency data
-err_interp = norm(Hz_WC(:,1)-H_true_used)./norm(H_true_used);
+err_interp = norm(Hz_WC(:,1)-H_interp_true)./norm(H_interp_true);
 err_interp_der = norm(Hz_WC(:,2)-Hp_true)./norm(Hp_true);
 fprintf('Error in learned transfer function values:      %e\n',err_interp)
 fprintf('Error in learned transfer function derivatives: %e\n',err_interp_der)
-%% plot bode plot from estimated data
+
+
+%% Calculate trajectory for input to compare
+U_comp = sawtooth(2*pi*10*t_eval);
+%U_comp = chirp(t_eval,1e-3,t_end,fs/10,'linear');
+
+Y_true = runDTSys(A,B,C,D,U_comp,t_eval);
+Y_low = runDTSys(Ep2\Ap2,Ep2\Bp2,Cp2,D,U_comp,t_eval);
+Y_Hlow = runDTSys(Ep1\Ap1,Ep1\Bp1,Cp1,D,U_comp,t_eval);
+Y_VF = runDTSys(Avf,Bvf,Cvf,D,U_comp,t_eval);
+
+%% Plot output responses
 %plot bode plot from estimated data
 %need to make freqs be in [-log_min_freq, pi)
 
 load ColorMat.mat
 
-freqs_plt = freqs_plot*Ts;
 figure
-loglog(freqs_plt,abs(H_true),'k','LineWidth',2)
+plot(t_eval,Y_true,'k','LineWidth',2)
 hold on
-loglog(freqs_plt, abs(H_VF),'-.','Color',ColorMat(1,:),'LineWidth',2)
-loglog(freqs_plt, abs(H_HerLow),'--','Color',ColorMat(2,:),'LineWidth',2)
-loglog(freqs_plt, abs(H_Low),':','Color',ColorMat(3,:),'LineWidth',2)
-legend('$H$','$\hat H_r^{VF}$','$\hat H_r^{HL}$','$\hat H_r^{L}$',...
-    'interpreter','latex')
+plot(t_eval, Y_VF,'-.','Color',ColorMat(1,:),'LineWidth',2)
+plot(t_eval, Y_low,'--','Color',ColorMat(2,:),'LineWidth',2)
+plot(t_eval, Y_Hlow,':','Color',ColorMat(3,:),'LineWidth',2)
+legend('$Y$','$\hat Y_r^{VF}$','$\hat Y_r^{L}$','$\hat Y_r^{HL}$',...
+    'interpreter','latex','Orientation','horizontal')
 
 ax = gca;
 Default_TW = ax.TickLength;
@@ -212,27 +198,33 @@ ax.LineWidth = Default_LW * 2;
 %change font size
 ax.FontSize = 14;
 %specify tick location and labels
-xticks([1e-2,1e-1,pi])
-xticklabels({'10^{-2}','10^{-1}','\pi'})
-xlabel('$\omega$','interpreter','latex','fontsize',25)
+%xticks([1e-2,1e-1,pi])
+%xticklabels({'10^{-2}','10^{-1}','\pi'})
+xlabel('time (seconds)','interpreter','latex','fontsize',25)
 %set limits of plot
-xlim([1e-2,pi])
+%xlim([1e-2,pi])
 %labels
-ylabel('$|\hat H_r^x(e^{\mathbf i \omega})|$','interpreter','latex','fontsize',20)
+ylabel('$\hat Y^x_r[t]$','interpreter','latex','fontsize',20)
+yticks([-.04,-.02,0,.02,.04])
 % xlabel('$r$','interpreter','latex','fontsize',30)
 lgd = legend();
-lgd.Location = 'northwest';
+lgd.Location = 'north';
 
-%% plot errors from estiamted data
+%% plot error trajectory
+err_VF = Y_VF-Y_true;
+err_Low = Y_low-Y_true;
+err_Hlow = Y_Hlow-Y_true;
+
+
 %plot errors from estiamted data
 figure
 %loglog(freqs_plt_interp,err_interp,'LineWidth',2)
-loglog(freqs_plt, err_VF,'LineWidth',2)
+plot(t_eval, err_VF,'LineWidth',2)
 hold on
-loglog(freqs_plt, err_HerLow,'LineWidth',2)
-loglog(freqs_plt, err_Low,'LineWidth',2)
-legend('$\hat H_r^{VF}$','$\hat H_r^{HL}$','$\hat H_r^{L}$',...
-    'interpreter','latex')
+plot(t_eval, err_Low,'LineWidth',2)
+plot(t_eval, err_Hlow,'LineWidth',2)
+legend('$\hat Y_r^{VF}$','$\hat Y_r^{L}$','$\hat Y_r^{HL}$',...
+    'interpreter','latex','Orientation','horizontal')
 %title('Relative error at random points on unit circle estiamted data')
 
 ax = gca;
@@ -244,82 +236,21 @@ ax.LineWidth = Default_LW * 2;
 %change font size
 ax.FontSize = 14;
 %specify tick location and labels
-xticks([freqs_plt(1),1e-1,pi])
-xticks([1e-2,1e-1,pi])
-xticklabels({'10^{-2}','10^{-1}','\pi'})
+%xticks([freqs_plt(1),1e-1,pi])
+%xticks([1e-2,1e-1,pi])
+%xticklabels({'10^{-2}','10^{-1}','\pi'})
 %set limits of plot
-xlabel('$\omega$','interpreter','latex','fontsize',25)
-xlim([1e-2,pi])
+xlabel('time (seconds)','interpreter','latex','fontsize',25)
+%xlim([1e-2,pi])
 %labels
-ylabel('$|H(e^{\mathbf i \omega})-\hat H_r^x(e^{\mathbf i \omega})|/|H(e^{\mathbf i \omega})|$','interpreter','latex','fontsize',20)
+ylim([-2.5e-9,1.8e-9])
+yticks([-2,-1,0,1]*1e-9)
+ylabel('$Y[t]-\hat Y_r^x[t]$','interpreter','latex','fontsize',20)
 % xlabel('$r$','interpreter','latex','fontsize',30)
 lgd = legend();
-lgd.Location = 'northwest';
+lgd.Location = 'north';
 
-%% plot bode plot from true data
-%plot bode plot from estimated data
-%need to make freqs be in [-log_min_freq, pi)
-freqs_plt = freqs_plot*Ts;
-figure
-loglog(freqs_plt,abs(H_true),'k','LineWidth',2)
-hold on
-loglog(freqs_plt, abs(H_VFt),'-.','Color',ColorMat(1,:),'LineWidth',2)
-loglog(freqs_plt, abs(H_HerLowt),'--','Color',ColorMat(2,:),'LineWidth',2)
-loglog(freqs_plt, abs(H_Lowt),':','Color',ColorMat(3,:),'LineWidth',2)
-legend('$H$','$\tilde H_r^{VF}$','$\tilde H_r^{HL}$','$\tilde H_r^{L}$',...
-    'interpreter','latex')
 
-ax = gca;
-Default_TW = ax.TickLength;
-Default_LW = ax.LineWidth;
-%double tick width and length
-ax.TickLength = Default_TW * 2;
-ax.LineWidth = Default_LW * 2;
-%change font size
-ax.FontSize = 14;
-%specify tick location and labels
-xticks([1e-2,1e-1,pi])
-xticklabels({'10^{-2}','10^{-1}','\pi'})
-xlabel('$\omega$','interpreter','latex','fontsize',25)
-%set limits of plot
-xlim([1e-2,pi])
-%labels
-ylabel('$|\tilde H_r^x(e^{\mathbf i \omega})|$','interpreter','latex','fontsize',20)
-% xlabel('$r$','interpreter','latex','fontsize',30)
-lgd = legend();
-lgd.Location = 'northwest';
-
-%% plot errors from true data
-%plot errors from estiamted data
-figure
-%loglog(freqs_plt_interp,err_interp,'LineWidth',2)
-loglog(freqs_plt, err_VFt,'LineWidth',2)
-hold on
-loglog(freqs_plt, err_HerLowt,'LineWidth',2)
-loglog(freqs_plt, err_Lowt,'LineWidth',2)
-legend('$\tilde H_r^{VF}$','$\tilde H_r^{HL}$','$\tilde H_r^{L}$',...
-    'interpreter','latex')
-%title('Relative error at random points on unit circle estiamted data')
-
-ax = gca;
-Default_TW = ax.TickLength;
-Default_LW = ax.LineWidth;
-%double tick width and length
-ax.TickLength = Default_TW * 2;
-ax.LineWidth = Default_LW * 2;
-%change font size
-ax.FontSize = 14;
-%specify tick location and labels
-xticks([1e-2,1e-1,pi])
-xticklabels({'10^{-2}','10^{-1}','\pi'})
-xlabel('$\omega$','interpreter','latex','fontsize',25)
-%set limits of plot
-xlim([1e-2,pi])
-%labels
-ylabel('$|H(e^{\mathbf i \omega})-\tilde H_r^x(e^{\mathbf i \omega})|/|H(e^{\mathbf i \omega})|$','interpreter','latex','fontsize',20)
-% xlabel('$r$','interpreter','latex','fontsize',30)
-lgd = legend();
-lgd.Location = 'northwest';
 %% System errors
 fprintf('Calculating system errors...\n')
 %H2 from approximate data
@@ -338,18 +269,17 @@ H2_dist_Low = norm(sysd_Low-sysd_Lowt)/norm(sysd_Lowt);
 H2_dist_HerLow = norm(sysd_HerLow-sysd_HerLowt)/norm(sysd_HerLowt);
 H2_dist_VF = norm(sysd_VF-sysd_VFt)/norm(sysd_VFt);
 
-% %H_inf from approximate data
-% Hinf_Sysd = norm(sysd,'inf');
-% Hinf_Low = norm(sysd-sysd_Low,'inf')/Hinf_Sysd;
-% Hinf_HerLow = norm(sysd-sysd_HerLow,'inf')/Hinf_Sysd;
-% Hinf_VF = norm(sysd-sysd_VF,'inf')/Hinf_Sysd;
-% 
-% 
-% %H_inf from true data
-% Hinf_Lowt = norm(sysd-sysd_Lowt,'inf')/Hinf_Sysd;
-% Hinf_HerLowt = norm(sysd-sysd_HerLowt,'inf')/Hinf_Sysd;
-% Hinf_VFt = norm(sysd-sysd_VFt,'inf')/Hinf_Sysd;
+%H_inf from approximate data
+Hinf_Sysd = norm(sysd,'inf');
+Hinf_Low = norm(sysd-sysd_Low,'inf')/Hinf_Sysd;
+Hinf_HerLow = norm(sysd-sysd_HerLow,'inf')/Hinf_Sysd;
+Hinf_VF = norm(sysd-sysd_VF,'inf')/Hinf_Sysd;
 
+
+%H_inf from true data
+Hinf_Lowt = norm(sysd-sysd_Lowt,'inf')/Hinf_Sysd;
+Hinf_HerLowt = norm(sysd-sysd_HerLowt,'inf')/Hinf_Sysd;
+Hinf_VFt = norm(sysd-sysd_VFt,'inf')/Hinf_Sysd;
 
 %H_inf distance of ROM systems
 %Hinf_dist_HerLow = norm(sysd_HerLow-sysd_HerLowt,'inf')/norm(sysd_HerLowt,'inf');
@@ -359,18 +289,18 @@ H2_dist_VF = norm(sysd_VF-sysd_VFt)/norm(sysd_VFt);
 fprintf('------ H2 FROM APX ERRORS ------\n')
 fprintf('Low: %e, HerLow: %e, VF: %e\n',...
     H2_Low, H2_HerLow, H2_VF)
-fprintf('------ H2 FROM TRUE ERRORS ------\n\n')
-fprintf('Low: %e, HerLow: %e, VF: %e\n',...
+fprintf('------ H2 FROM TRUE ERRORS ------\n')
+fprintf('Low: %e, HerLow: %e, VF: %e\n\n',...
     H2_Lowt, H2_HerLowt, H2_VFt)
 fprintf('------ H2 ROM DISTANCES ------\n\n')
 fprintf('Low: %e, HerLow: %e, VF: %e\n',...
     H2_dist_Low, H2_dist_HerLow, H2_dist_VF)
-% fprintf('------ Hinf FROM APX ERRORS ------\n')
-% fprintf('Low: %e, HerLow: %e, VF: %e\n',...
-%     Hinf_Low, Hinf_HerLow, Hinf_VF)
-% fprintf('------ Hinf FROM TRUE ERRORS ------\n')
-% fprintf('Low: %e, HerLow: %e, VF: %e\n',...
-%     Hinf_Lowt, Hinf_HerLowt, Hinf_VFt)
+fprintf('------ Hinf FROM APX ERRORS ------\n')
+fprintf('Low: %e, HerLow: %e, VF: %e\n',...
+    Hinf_Low, Hinf_HerLow, Hinf_VF)
+fprintf('------ Hinf FROM TRUE ERRORS ------\n')
+fprintf('Low: %e, HerLow: %e, VF: %e\n',...
+    Hinf_Lowt, Hinf_HerLowt, Hinf_VFt)
 
 %Matrix of H2 errors for converting to LaTex format
 %exclude loewner because not in thesis
@@ -382,5 +312,5 @@ H2_err_mat = [H2_Low, H2_HerLow, H2_VF;...
 %                Hinf_HerLowt, Hinf_VFt, Hinf_AAAt;...
 %                Hinf_dist_HerLow, Hinf_dist_VF, Hinf_dist_AAA];
 
-matrix2latex(H2_err_mat, 'H2_err_Synth.txt')
+%matrix2latex(H2_err_mat, 'H2_err_Synth.txt')
 %matrix2latex(Hinf_err_mat, 'Hinf_err_RandEx1_correct.txt')

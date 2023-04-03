@@ -30,7 +30,7 @@ num_n = length(n_vec);
 err_vec = nan(num_n,1);
 for k = 1:num_n
     opts.n = n_vec(k);
-    [Hz,nstd_Hz,cond_nums,residuals,opts] = CalculateTFVals(U,Y,z,opts);
+    [Hz,nstd_Hz,cond_nums,residuals,Ls_vec,opts] = CalculateTFVals(U,Y,z,opts);
     err_vec(k) = abs(Hz-Hz_true)/abs(Hz_true);
 end
 
@@ -40,7 +40,8 @@ if isnan(nhat)
     nhat = 83;
 end
 
-figure
+f=figure;
+%f.Position = [476 445 700 280];
 semilogy(n_vec,err_vec,'LineWidth',2)
 hold on
 xline(nhat,'color','#D95319','LineWidth',2)
@@ -63,4 +64,25 @@ xlabel('$m$','interpreter','latex','fontsize',25)
 %labels
 ylabel('$|H_1(\sigma)-M_{0,m}(\sigma)|/|H_1(\sigma)|$','interpreter','latex','fontsize',20)
 %lgd = legend();
+%lgd.Location = 'best';
+
+%% Plot hankel singular values
+S = PlotHankSingVals(A,B,C,0);
+S_MP = find(S/S(1)<10^(-13),1);
+f=figure;
+%f.Position = [476 445 700 280];
+semilogy(S/S(1),'-*','LineWidth',2)
+xline(nhat,'color','#D95319','LineWidth',2)
+ax = gca;
+
+Default_TW = ax.TickLength;
+Default_LW = ax.LineWidth;
+%double tick width and length
+ax.TickLength = Default_TW * 2;
+ax.LineWidth = Default_LW * 2;
+%change font size
+ax.FontSize = 14;
+%labels
+ylabel('Hankel Singular Values','fontsize',20)
+legend('HSV','$\hat n$','interpreter','latex','fontsize',20,Location='southwest')
 %lgd.Location = 'best';

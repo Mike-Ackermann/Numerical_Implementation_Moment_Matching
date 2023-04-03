@@ -68,7 +68,7 @@ loglog(freqs,cond_nums/max(cond_nums),'LineWidth',2)
 hold on
 loglog(freqs,relder/max(relder),'LineWidth',2)
 %need to get the prime
-legend('$\kappa_2([\mathbf W\,\mathbf z])$','$\frac{H(\sigma)}{H(\sigma)}$','Interpreter','latex')
+legend('$\kappa_2([\mathbf W\,\mathbf z])$','$\frac{H''_0(\sigma)}{H_0(\sigma)}$','Interpreter','latex')
 
 ax = gca;
 Default_TW = ax.TickLength;
@@ -77,5 +77,6 @@ ax.TickLength = Default_TW * 2;
 ax.LineWidth = Default_LW * 2;
 ax.FontSize = 16;
 xlabel('$\omega$','Interpreter','latex','FontSize',20)
+ylabel('Normalized Quantity','Interpreter','latex','FontSize',20)
 xlim([10^-5,pi])
 ylim([10^-4,5])
