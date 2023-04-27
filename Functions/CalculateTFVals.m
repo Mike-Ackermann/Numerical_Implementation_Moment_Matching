@@ -97,7 +97,7 @@ for k = 1:num
     cond_vec = zeros(num_est,1); %stores all condition numbers
     res_vec = zeros(num_est,1); %Least Squares residual
     LS_vec_temp = zeros(num_est,1);
-    parfor current_SS = 1:num_est
+    for current_SS = 1:num_est
         W = W_cell{current_SS}; %get precomputed subspace
         %calculate and store estimates, cond nums, and LS used data
         [Mj, cond_num,res,LS] = moment_match(z,n,W,der_order);

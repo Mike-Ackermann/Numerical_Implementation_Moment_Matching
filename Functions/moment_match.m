@@ -36,7 +36,12 @@ z = [zeros(n+1,1);gamma_sig];
 
 A = [W -z];
 b = [gamma_sig;zeros(n+1,1)];
-x = A\b;
+if ~LS
+    [Q,R] = orthogonalize_Wz(W,-z);
+    x = R\(Q'*b);
+else
+    x = A\b;
+end
 
 M0 = x(end);
 
