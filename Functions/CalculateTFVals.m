@@ -30,6 +30,7 @@ def.tol = 10^(-3);
 def.der_order = 0;
 def.num_est = 10;
 def.n = nan;
+def.tau = 10^-10;
 def.t0 = 1;
 def.W = nan;
 if nargin<4
@@ -97,10 +98,10 @@ for k = 1:num
     cond_vec = zeros(num_est,1); %stores all condition numbers
     res_vec = zeros(num_est,1); %Least Squares residual
     LS_vec_temp = zeros(num_est,1);
-    for current_SS = 1:num_est
+    parfor current_SS = 1:num_est
         W = W_cell{current_SS}; %get precomputed subspace
         %calculate and store estimates, cond nums, and LS used data
-        [Mj, cond_num,res,LS] = moment_match(z,n,W,der_order);
+        [Mj, cond_num,res,LS] = moment_match(z,n,W,der_order,opts.tau);
         Mj_est_vec(current_SS,:) = Mj.';
         cond_vec(current_SS) = cond_num;
         res_vec(current_SS) = res;
@@ -119,7 +120,7 @@ for k = 1:num
             thin_cond = NaN;
         else
             min_accuracy = opts.tol;
-            num_to_accept = min(10,num_est);
+            num_to_accept = min([10,num_est,length(thin_data)]);
             [sorted_thin_res,accepted_res] = sort(thin_res);
             %only lowest 10 res accepted
             accepted_res = accepted_res(1:num_to_accept);
@@ -131,7 +132,7 @@ for k = 1:num
             thin_data = thin_data(accepted_res);
             thin_res = thin_res(accepted_res);
             thin_cond = thin_cond(accepted_res);
-            if i == 0;
+            if i == 0
                 LS_vec_temp = LS_vec_temp(accepted_res);
             end
         end

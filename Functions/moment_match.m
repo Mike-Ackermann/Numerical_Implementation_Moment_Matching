@@ -1,5 +1,5 @@
 
-function [Mj,cond_num,res,LS] = moment_match(s,n,W,k)
+function [Mj,cond_num,res,LS] = moment_match(s,n,W,k,tau)
 %Function that performs moment matching.  Original method from
 %Burohman, Besselink, Scherpen 2020.  Modified for numerical
 %implementation.
@@ -20,7 +20,7 @@ function [Mj,cond_num,res,LS] = moment_match(s,n,W,k)
 %% Check interpolation conditions
 % Check if it is possible to find a unique solution for M_0 at s for this
 % window
-[val, LS] = check_interp(s,W,n);
+[val, LS] = check_interp(s,W,n,tau);
 %if we cant interpolate, quit
 if ~val
     Mj = NaN(k+1,1);
