@@ -8,7 +8,7 @@ u = W'*z;
 v = z - (W*u);
 norm_v = norm(v);
 
-R = sparse([diag(ones(n,1)), u;zeros(1,n), norm_v]);
+R = sparse([eye(n), u;zeros(1,n), norm_v]);
 Q = [W v/norm_v];
 
 
