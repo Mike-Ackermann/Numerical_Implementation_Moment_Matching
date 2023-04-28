@@ -13,27 +13,33 @@ function [val,LS] = check_interp(s,U,n,tau)
 %n is order of system
 %s is the interpolation point
 
-val = 0;
-LS = 0;
-
 gamma_sig = calc_gamma(s,n,0);
 gamma_sig = gamma_sig/norm(gamma_sig);
 z = [zeros(n+1,1);gamma_sig];
 b = [gamma_sig;zeros(n+1,1)];
 
+v = z-(U*(U'*z));
+b_perp = b-(U*(U'*b));
 
-%calculate nessesary ranks
-
-%use tau as tolerance for both rank decisions
-%rank1 = rank([U z b]);
-%rank2 = rank([U z]);
-%[~,rank4] = size(U);
-%rank3 = rank4+1;
-
-% check if the norm of the componet of z orthogonal to U is not less than
+%%%%%%%% UNIQUENESS CONDITION %%%%%%%%%%%%%
+% check if the norm of the component of z orthogonal to U is not less than
 % tau.  "Not less than" is used to allow tau = nan to effectively skip this
 % check.
-val = ~(norm(z-U*(U'*z)) < tau);
+val = ~(norm(v) < tau);
+
+%%%%%%%% EXISTENCE CONDITION %%%%%%%%%%%%%
+
+%in_range_U = norm(b_perp) < tau;
+% b_perp is the part of b orthogonal to range(U).  If b_perp is not
+% (numerically) linearly dependent on v we say that b in not in range([U
+% b]).  This also captures the case where b is in range(U) since 
+% b_perp >= ((v*(v'*b_perp))/(norm(v)^2) >= 0
+
+% if tau = nan, then LS is always 1 (use \, not special solver)
+LS = ~(b_perp - ((v*(v'*b_perp))/(norm(v)^2)) < tau);
+
+
+
 
 [~,rank_U] = size(U);
 if val
@@ -45,18 +51,3 @@ else
     return
 end
 
-
-% if ~(rank3 == rank2)
-%     %if M0 is not unique, we can do nothing and must refuse this window
-%     return
-% elseif rank1 == rank2
-%     %if b is in Range([U,z]), then we can find M0 and do not need a LS
-%     %solution
-%     val = 1;
-%     LS = 0;
-% else
-%     %if b is not in Range([U,z]), then we need a LS solution, where M0 is
-%     %guarenteed to be unique
-%     val = 1;
-%     LS = 1;
-% end
