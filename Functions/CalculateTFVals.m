@@ -87,6 +87,7 @@ end
 
 %% Actually calculate the transfer function values and derivatives
 der_order = opts.der_order;
+tau = opts.tau;
 Hs = zeros(num,1 + der_order); %stores accepted TF vals and derivatives
 n_std_Hs = zeros(num,1 + der_order); %stores average normalized standard devs
 cond_nums = zeros(num,1); %stores average condition numbers of LS problem (val only)
@@ -101,7 +102,7 @@ for k = 1:num
     parfor current_SS = 1:num_est
         W = W_cell{current_SS}; %get precomputed subspace
         %calculate and store estimates, cond nums, and LS used data
-        [Mj, cond_num,res,LS] = moment_match(z,n,W,der_order,opts.tau);
+        [Mj, cond_num,res,LS] = moment_match(z,n,W,der_order,tau);
         Mj_est_vec(current_SS,:) = Mj.';
         cond_vec(current_SS) = cond_num;
         res_vec(current_SS) = res;

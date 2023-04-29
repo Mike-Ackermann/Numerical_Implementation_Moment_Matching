@@ -1,4 +1,4 @@
-function [val,LS] = check_interp(s,U,n,tau)
+function [val,LS,dont_use_solver] = check_interp(s,U,n,tau)
 % NEED TO CHANGE TO MATCH PAPER
 
 %Checks interpolation conditions (Modified conditions from Thm 13 in
@@ -27,6 +27,9 @@ b_perp = b-(U*(U'*b));
 % check.
 val = ~(norm(v) < tau);
 
+K = 10^3;
+dont_use_solver = ~(norm(v) > tau*K);
+
 %%%%%%%% EXISTENCE CONDITION %%%%%%%%%%%%%
 
 %in_range_U = norm(b_perp) < tau;
@@ -36,18 +39,18 @@ val = ~(norm(v) < tau);
 % b_perp >= ((v*(v'*b_perp))/(norm(v)^2) >= 0
 
 % if tau = nan, then LS is always 1 (use \, not special solver)
-LS = ~(b_perp - ((v*(v'*b_perp))/(norm(v)^2)) < tau);
+LS = ~(norm(b_perp - ((v*(v'*b_perp))/(norm(v)^2))) < tau);
 
 
 
 
-[~,rank_U] = size(U);
-if val
-    % if [U z b] is full rank, then we solve a LS problem
-    LS = rank([U z b]) == rank_U+2;
-else
-    % if z is not sufficiently linearly independent of U we cannot compute
-    % transfer function value.
-    return
-end
+% [~,rank_U] = size(U);
+% if val
+%     % if [U z b] is full rank, then we solve a LS problem
+%     LS = rank([U z b]) == rank_U+2;
+% else
+%     % if z is not sufficiently linearly independent of U we cannot compute
+%     % transfer function value.
+%     return
+% end
 
