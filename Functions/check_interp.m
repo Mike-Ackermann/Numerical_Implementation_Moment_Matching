@@ -14,7 +14,7 @@ function [val,LS,dont_use_solver] = check_interp(s,U,n,tau)
 %s is the interpolation point
 
 gamma_sig = calc_gamma(s,n,0);
-gamma_sig = gamma_sig/norm(gamma_sig);
+%gamma_sig = gamma_sig/norm(gamma_sig);
 z = [zeros(n+1,1);gamma_sig];
 b = [gamma_sig;zeros(n+1,1)];
 
@@ -27,7 +27,7 @@ b_perp = b-(U*(U'*b));
 % check.
 val = ~(norm(v) < tau);
 
-K = 10^3;
+K = 10^4;
 dont_use_solver = ~(norm(v) > tau*K);
 
 %%%%%%%% EXISTENCE CONDITION %%%%%%%%%%%%%
