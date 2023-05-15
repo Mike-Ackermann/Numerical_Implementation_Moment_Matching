@@ -4,14 +4,22 @@ function [Q,R] = orthogonalize_Wz(W,z)
 % returns Q, R such that QR = [Wz]
 [m,n] = size(W);
 
+% u = W'*z;
+% v = z - (W*u);
+% norm_v = norm(v);
+% 
+% R = sparse([eye(n), u;zeros(1,n), norm_v]);
+% Q = [W v/norm_v];
+
 u = W'*z;
 v = z - (W*u);
-norm_v = norm(v);
+c = W'*v;
+v = v-W*c;
+u = u + c;
+rho = norm(v);
 
-R = sparse([eye(n), u;zeros(1,n), norm_v]);
-Q = [W v/norm_v];
-
-
+R = sparse([eye(n), u;zeros(1,n), rho]);
+Q = [W v/rho];
 
 
 

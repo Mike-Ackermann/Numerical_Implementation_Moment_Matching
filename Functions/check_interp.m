@@ -28,6 +28,7 @@ b_perp = b-(U*(U'*b));
 val = ~(norm(v) < tau);
 
 K = 10^4;
+%K = 1;
 dont_use_solver = ~(norm(v) > tau*K);
 
 %%%%%%%% EXISTENCE CONDITION %%%%%%%%%%%%%

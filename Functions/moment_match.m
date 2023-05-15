@@ -36,6 +36,9 @@ z = [zeros(n+1,1);gamma_sig];
 
 A = [W -z];
 b = [gamma_sig;zeros(n+1,1)];
+%%%%%%%%%%%
+dont_use_solver = false;
+%%%%%%%%%%%
 if ~dont_use_solver
     [Q,R] = orthogonalize_Wz(W,-z);
     x = R\(Q'*b);
