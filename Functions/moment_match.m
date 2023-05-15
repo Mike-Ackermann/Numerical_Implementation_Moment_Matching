@@ -20,7 +20,7 @@ function [Mj,cond_num,res,LS] = moment_match(s,n,W,k,tau)
 %% Check interpolation conditions
 % Check if it is possible to find a unique solution for M_0 at s for this
 % window
-[val, LS,dont_use_solver] = check_interp(s,W,n,tau);
+[val, LS] = check_interp(s,W,n,tau);
 %if we cant interpolate, quit
 if ~val
     Mj = NaN(k+1,1);
@@ -36,15 +36,9 @@ z = [zeros(n+1,1);gamma_sig];
 
 A = [W -z];
 b = [gamma_sig;zeros(n+1,1)];
-%%%%%%%%%%%
-dont_use_solver = false;
-%%%%%%%%%%%
-if ~dont_use_solver
-    [Q,R] = orthogonalize_Wz(W,-z);
-    x = R\(Q'*b);
-else
-    x = A\b;
-end
+
+[Q,R] = orthogonalize_Wz(W,-z);
+x = R\(Q'*b);
 
 M0 = x(end);
 
@@ -82,7 +76,7 @@ for i = 1:k
         %execution here.
         return
     end
-    x = A\rhs;
+    x = R\(Q'*rhs);
     Mi = x(end);
     Mj(i+1) = Mi;
 end

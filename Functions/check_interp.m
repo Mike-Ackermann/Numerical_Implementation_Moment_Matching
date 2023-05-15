@@ -1,4 +1,4 @@
-function [val,LS,dont_use_solver] = check_interp(s,U,n,tau)
+function [val,LS] = check_interp(s,U,n,tau)
 % NEED TO CHANGE TO MATCH PAPER
 
 %Checks interpolation conditions (Modified conditions from Thm 13 in
@@ -27,9 +27,9 @@ b_perp = b-(U*(U'*b));
 % check.
 val = ~(norm(v) < tau);
 
-K = 10^4;
+%K = 10^4;
 %K = 1;
-dont_use_solver = ~(norm(v) > tau*K);
+%dont_use_solver = ~(norm(v) > tau*K);
 
 %%%%%%%% EXISTENCE CONDITION %%%%%%%%%%%%%
 
