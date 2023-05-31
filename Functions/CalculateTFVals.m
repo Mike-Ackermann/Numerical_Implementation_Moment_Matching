@@ -30,7 +30,8 @@ def.tol = 10^(-3);
 def.der_order = 0;
 def.num_est = 10;
 def.n = nan;
-def.tau = 10^-10;
+def.tau1 = 10^-10;
+def.tau2 = inf;
 def.t0 = 1;
 def.W = nan;
 if nargin<4
@@ -87,7 +88,8 @@ end
 
 %% Actually calculate the transfer function values and derivatives
 der_order = opts.der_order;
-tau = opts.tau;
+tau1 = opts.tau1;
+tau2 = opts.tau2;
 Hs = zeros(num,1 + der_order); %stores accepted TF vals and derivatives
 n_std_Hs = zeros(num,1 + der_order); %stores average normalized standard devs
 cond_nums = zeros(num,1); %stores average condition numbers of LS problem (val only)
@@ -102,7 +104,7 @@ for k = 1:num
     parfor current_SS = 1:num_est
         W = W_cell{current_SS}; %get precomputed subspace
         %calculate and store estimates, cond nums, and LS used data
-        [Mj, cond_num,res,LS] = moment_match(z,n,W,der_order,tau);
+        [Mj, cond_num,res,LS] = moment_match(z,n,W,der_order,tau1,tau2);
         Mj_est_vec(current_SS,:) = Mj.';
         cond_vec(current_SS) = cond_num;
         res_vec(current_SS) = res;
@@ -140,6 +142,8 @@ for k = 1:num
         if isempty(thin_data)
             avg_Mj = NaN;
             avg_cond = NaN;
+            avg_res = NaN;
+            std_norm = NaN;
         else
             %set the accepted M0 to be the mean of the calculated M0 values            
             avg_Mj = mean(thin_data);
@@ -151,12 +155,12 @@ for k = 1:num
             end
             avg_cond = mean(thin_cond);
             avg_res = mean(thin_res);
-            cond_nums(k) = avg_cond;
-            residuals(k) = avg_res;
-            LS_vec(k) = any(LS_vec_temp); 
-            Hs(k,i+1) = avg_Mj;
-            n_std_Hs(k,i+1) = std_norm;
-        end      
+        end
+        cond_nums(k) = avg_cond;
+        residuals(k) = avg_res;
+        LS_vec(k) = any(LS_vec_temp); 
+        Hs(k,i+1) = avg_Mj;
+        n_std_Hs(k,i+1) = std_norm;     
     end
 end
 
