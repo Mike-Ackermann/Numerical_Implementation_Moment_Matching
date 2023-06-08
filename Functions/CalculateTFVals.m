@@ -1,5 +1,5 @@
 
-function [Hs,n_std_Hs,cond_nums,residuals,LS_vec,opts] = ...
+function [Hs,n_std_Hs,cond_nums,residuals,opts] = ...
     CalculateTFVals(U,Y,z_vec,opts)
 % Finds values (and derivatives) of underlying dynamical system that
 % produces output Y given input U.
@@ -26,24 +26,25 @@ function [Hs,n_std_Hs,cond_nums,residuals,LS_vec,opts] = ...
 %           calculate values of transfer function of underlying dynamical
 %           system
 
-def.tol = 10^(-3);
-def.der_order = 0;
-def.num_est = 10;
-def.n = nan;
-def.tau1 = 10^-10;
-def.tau2 = inf;
-def.t0 = 1;
-def.W = nan;
+default.der_order = 0;
+default.num_windows = 20;
+default.num_windows_keep = 10;
+default.n = nan;
+default.tau1 = 10^-10;
+default.tau2 = inf;
+default.t0 = 1;
+default.W = nan;
 if nargin<4
-    opts=def;
+    opts=default;
 else
     %Merge default values into opts
-    A=fieldnames(def);
-    for m=1:length(A)
-        if ~isfield(opts,A(m))
-            dum=char(A(m));
-            dum2=getfield(def,dum);
-            opts=setfield(opts,dum,dum2);
+    names=fieldnames(default);
+    for m=1:length(names)
+        if ~isfield(opts,names(m))
+            %dum=char(names(m));
+            %dum2=getfield(default,dum);
+            %opts=setfield(opts,dum,dum2);
+            opts.(names{m}) = default.(names{m});
         end
     end
 end
@@ -58,7 +59,8 @@ else
     n = opts.n;
 end
 fprintf('Using n = %d\n',n)
-num_est = opts.num_est;
+num_windows = opts.num_windows;
+num_windows_keep = opts.num_windows_keep;
 t = 3*n;
 T = length(U);
 
@@ -67,11 +69,10 @@ T = length(U);
 if iscell(opts.W)
     W_cell = opts.W;
 else
-    num = length(z_vec);
     t0 = opts.t0;
-    num_skip = floor((T-t-t0)/num_est);
+    num_skip = floor((T-t-t0)/num_windows);
     %cell array for storing the orthogonal bases for each window
-    W_cell = cell(num_est,1);
+    W_cell = cell(num_windows,1);
     count = 1;
     for t_start = t0:num_skip:T-t
         t_end = t_start + t;
@@ -86,7 +87,8 @@ else
     end
 end
 
-%% Actually calculate the transfer function values and derivatives
+%% Calculate the transfer function values and derivatives
+num = length(z_vec);
 der_order = opts.der_order;
 tau1 = opts.tau1;
 tau2 = opts.tau2;
@@ -94,21 +96,18 @@ Hs = zeros(num,1 + der_order); %stores accepted TF vals and derivatives
 n_std_Hs = zeros(num,1 + der_order); %stores average normalized standard devs
 cond_nums = zeros(num,1); %stores average condition numbers of LS problem (val only)
 residuals = zeros(num,1); %stores the average residual of the LS problem
-LS_vec = false(num,1); %stores if we could solve linear system "exactly"
 for k = 1:num
     z = z_vec(k);
-    Mj_est_vec = zeros(num_est,1+der_order); %stores all estimates of val and ders
-    cond_vec = zeros(num_est,1); %stores all condition numbers
-    res_vec = zeros(num_est,1); %Least Squares residual
-    LS_vec_temp = zeros(num_est,1);
-    parfor current_SS = 1:num_est
+    Mj_est_vec = zeros(num_windows,1+der_order); %stores all estimates of val and ders
+    cond_vec = zeros(num_windows,1); %stores all condition numbers
+    res_vec = zeros(num_windows,1); %Least Squares residual
+    parfor current_SS = 1:num_windows
         W = W_cell{current_SS}; %get precomputed subspace
         %calculate and store estimates, cond nums, and LS used data
-        [Mj, cond_num,res,LS] = moment_match(z,n,W,der_order,tau1,tau2);
+        [Mj, cond_num,res] = moment_match(z,n,W,der_order,tau1,tau2);
         Mj_est_vec(current_SS,:) = Mj.';
         cond_vec(current_SS) = cond_num;
         res_vec(current_SS) = res;
-        LS_vec_temp(current_SS) = LS;
     end
 
     for i = 0:der_order
@@ -117,28 +116,23 @@ for k = 1:num
         thin_data = Mj_est_vec(idx,i+1);
         thin_cond = cond_vec(idx);
         thin_res = res_vec(idx);
-        %thin_LS = LS_vec_temp(idx);
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        % IF TAKE OUT KEEPING ONLY A SUBSET OF THE DATA WE CAN REMOVE
+        % EVERYTHING BETWEEN THE PERCENTS
         if isempty(thin_data)
             thin_data = NaN;
             thin_cond = NaN;
         else
-            min_accuracy = opts.tol;
-            num_to_accept = min([10,num_est,length(thin_data)]);
-            [sorted_thin_res,accepted_res] = sort(thin_res);
-            %only lowest 10 res accepted
+            % Accept maximally num_windows_keep estimates
+            % MIGHT TAKE THIS OUT
+            num_to_accept = min([num_windows_keep,length(thin_data)]);
+            [~,accepted_res] = sort(thin_res);
             accepted_res = accepted_res(1:num_to_accept);
-            %reject = 0;
-            if sorted_thin_res(num_to_accept) > min_accuracy
-                accepted_res = false(length(thin_data),1);
-            end
-            
             thin_data = thin_data(accepted_res);
             thin_res = thin_res(accepted_res);
             thin_cond = thin_cond(accepted_res);
-            if i == 0
-                LS_vec_temp = LS_vec_temp(accepted_res);
-            end
         end
+        %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%        
         if isempty(thin_data)
             avg_Mj = NaN;
             avg_cond = NaN;
@@ -150,15 +144,14 @@ for k = 1:num
             std_dev = std(thin_data);
             %normalize the standard deviation
             std_norm = std_dev/abs(avg_Mj);
-            if abs(avg_Mj) < 1e-14 %if moment is too small standard deviation error bound doesnt work
-                std_norm = 0;
-            end
+            % if abs(avg_Mj) < 1e-14 %if moment is too small standard deviation error bound doesnt work
+            %     std_norm = 0;
+            % end
             avg_cond = mean(thin_cond);
             avg_res = mean(thin_res);
         end
         cond_nums(k) = avg_cond;
         residuals(k) = avg_res;
-        LS_vec(k) = any(LS_vec_temp); 
         Hs(k,i+1) = avg_Mj;
         n_std_Hs(k,i+1) = std_norm;     
     end
