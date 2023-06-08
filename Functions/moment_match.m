@@ -1,5 +1,5 @@
 
-function [Mj,cond_num,res,LS] = moment_match(s,n,W,k,tau1,tau2)
+function [Mj,cond_num,res] = moment_match(s,n,W,k,tau1,tau2)
 %Function that performs moment matching.  Original method from
 %Burohman, Besselink, Scherpen 2020.  Modified for numerical
 %implementation.
@@ -20,25 +20,14 @@ function [Mj,cond_num,res,LS] = moment_match(s,n,W,k,tau1,tau2)
 %% Check interpolation conditions
 % Check if it is possible to find a unique solution for M_0 at s for this
 % window
-[is_unique, LS] = check_interp(s,W,n,tau1,tau2);
+[unique_cond, exist_cond] = check_interp(s,W,n,tau1,tau2);
 %if we cant interpolate, quit
-if ~is_unique
+if ~unique_cond || ~exist_cond
     Mj = NaN(k+1,1);
     cond_num = NaN;
     res = NaN;
     return
 end
-% ----------------------------------------------------------------------
-% WHEN PUBLISH CODE NEED TO HAVE THIS NOT COMMENTED AND TAKE OUT MENTION OF
-% LS IN CALCULATE TF VALUES (REMOVE THE YELLOW STARS IN PLOT ERROR QUICK AS
-% WELL)
-if LS
-    Mj = NaN(k+1,1);
-    cond_num = NaN;
-    res = NaN;
-    return
-end
-% ----------------------------------------------------------------------
 
 %% Calculate 0th moment of system.
 %Calculate an estimate for M_0
@@ -55,24 +44,9 @@ M0 = x(end);
 
 %Calculate the relative residual
 res = norm(A*x - b)/norm(b);
-% if ~LS %if we didnt use least squares, calculate regular condition number
-    cond_num = cond(A);
-% else %if we did use least squares, calculate LS condition number
-%     %Demmel Thm 3.4
-%     bhat = A*x;
-%     arg = abs(bhat'*b)/(norm(bhat)*norm(b));
-%     if abs(arg) > 1
-%         if arg < 0
-%             arg = -1;
-%         else
-%             arg = 1;
-%         end
-%     end
-%     theta = acos(arg);
-% 
-%     K2A = cond(A);
-%     cond_num = (2*K2A/cos(theta))+(tan(theta)*K2A^2);
-% end
+
+cond_num = cond(A);
+
 %% Calculate higher order moments
 % NEED TO ADD CHECKING RANK CONDITIONS
 Mj = NaN(k+1,1);

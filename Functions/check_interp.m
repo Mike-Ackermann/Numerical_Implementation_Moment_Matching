@@ -1,4 +1,4 @@
-function [unique_cond,LS] = check_interp(s,U,n,tau1,tau2)
+function [unique_cond,exist_cond] = check_interp(s,U,n,tau1,tau2)
 % NEED TO CHANGE TO MATCH PAPER
 
 %Checks interpolation conditions (Modified conditions from Thm 13 in
@@ -27,6 +27,4 @@ unique_cond = norm(v) > (tau1*norm_z);
 
 %%%%%%%% EXISTENCE CONDITION %%%%%%%%%%%%%
 exist_cond = norm(b_perp - ((v*(v'*b_perp))/(norm(v)^2))) < (tau2*norm_z);
-
-LS = ~exist_cond;
 
