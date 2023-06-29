@@ -4,35 +4,34 @@
 %% construct data to use to find estimates of transfer function values
 fprintf('Generating data...\n')
 load Rand1000.mat
+n_true = length(A);
+Ts = 1e-3;
+% T = 1000;
+% t_eval = 0:T;
+% U = randn(T+1,1);
+% Y = runDTSys(A,B,C,D,U,t_eval);
+load Reproduce_MakePlotsSynthetic.mat;
 
-fs = 1e3;%1e3?
-Ts = 1/fs;
-t_end = 1;
+num = 400;
+log_min_freq = -2; %lowest frequency/Ts wanted in frequency range
+freqs = logspace(log_min_freq,log10(.99*pi),num);
+z = exp(1i*freqs);
 
-t_eval = 0:Ts:t_end;
-T = length(t_eval);
-U = randn(T,1);
-Y = runDTSys(A,B,C,D,U,t_eval);
-
-red = 100;
-freqs = logspace(-2,log10(.99*pi),4*red);
-%freqs = [freqs 1.5 .99*pi];
-num = length(freqs);
-r = 1; % radius of points
-z = r*exp(1i*freqs);
 
 clear opts
-opts.tol = 10^(-1);
 opts.der_order = 1;
-opts.num_est = 10;
-%opts.n = 300; %set n to 300 to follow section on estimating moments
+opts.num_windows = 20;
+opts.num_windows_keep = 10;
+opts.tau1 = 10^-10;
+opts.tau2 = 10^-10;
+ %set n to 300 to follow section on estimating moments
 
 %% Calulate Transfer Function Estimates
 fprintf('Calculating frequency data\n')
 tic
 [Hz,nstd_Hz,cond_nums,residuals,opts] = CalculateTFVals(U,Y,z,opts);
 toc
-
+%%
 %create vectors of input and putput closed under conjugation
 Hz_WC = [Hz; conj(Hz)];
 z_WC = [z.';conj(z.')];
@@ -40,15 +39,15 @@ z_WC = [z.';conj(z.')];
 Hz_WC = Hz_WC(idx,:);
 z_WC = z_WC(idx,:);
 
-%Hz_WC = Hz_WC_cheat;
-
 
 %% Construct 3 ROMS from estimated data
 fprintf('Constructing ROMs from learned data...\n')
-nmax = red;
+
+r = 100;
+
 %Hermite Loewner
 epsilon = 1e-8;
-[Ap1,Bp1,Cp1,Ep1] = HermiteLoewner(z_WC,Hz_WC(:,1),Hz_WC(:,2),nmax,epsilon);
+[Ap1,Bp1,Cp1,Ep1] = HermiteLoewner(z_WC,Hz_WC(:,1),Hz_WC(:,2),r,epsilon);
 %Loewner
 % change order of interpolation points to interweve
 zz = [z.';conj(z.')];
@@ -59,7 +58,7 @@ HzHz = [HzHz(1:2:end);HzHz(2:2:end)];
 zz = zz([idx2;idx2+length(z)]);
 HzHz = HzHz([idx2;idx2+length(z)]);
 
-[Ap2,Bp2,Cp2,Ep2] = Loewner(zz,HzHz,nmax,epsilon);
+[Ap2,Bp2,Cp2,Ep2] = Loewner(zz,HzHz,r,epsilon);
 
 % Vector Fitting
 eval_freqs = [freqs.';-freqs.']/Ts;
@@ -67,11 +66,12 @@ eval_freqs = eval_freqs(idx);
 
 opts2.spy1=0; opts2.spy2=0; opts2.cmplx_ss = 0;
 n_iter = 100;
-tolVF = 1e-5;
+tolVF = 3e-4;
 weights = ones(1,num*2); %dont weight
-%initl_poles = 1*exp((1:nmax)*2*pi*1i/nmax); %set initial poles inside upper unit circle
-initl_poles = exp(1i*linspace(10^(-3),.9*pi,nmax/2));
+%initl_poles = 1*exp((1:r)*2*pi*1i/r); %set initial poles inside upper unit circle
+initl_poles = exp(1i*linspace(10^(-3),.9*pi,r/2));
 initl_poles = [initl_poles, conj(initl_poles)];
+%initl_poles = eig(Ap1,Ep1);
 initl_poles = sort(initl_poles,'ComparisonMethod','real');
 count_VF = 0;
 converged = false; diverged = false;
@@ -89,6 +89,7 @@ fprintf('Constructing ROMs from true data...\n')
 
 %generate true data
 sysd = ss(A,B,C,D,Ts);
+% sysd = ss(A,B,C,D,1);
 I = eye(length(A));
 Hp_func = @(s) C*((s*I-A)\(-I*((s*I-A)\B)));
 H_func = @(s) C*((s*I-A)\B);
@@ -100,11 +101,11 @@ parfor i = 1:num*2
     H_interp_true(i) = H_func(z_WC(i));
     HzHz_true(i) = H_func(zz(i));
 end
-
+%%
 %Hermite Loewner
-[Ap1t,Bp1t,Cp1t,Ep1t] = HermiteLoewner(z_WC,H_interp_true,Hp_true,nmax,epsilon);
+[Ap1t,Bp1t,Cp1t,Ep1t] = HermiteLoewner(z_WC,H_interp_true,Hp_true,r,epsilon);
 %Loewner
-[Ap2t,Bp2t,Cp2t,Ep2t] = Loewner(zz,HzHz_true,nmax,epsilon);
+[Ap2t,Bp2t,Cp2t,Ep2t] = Loewner(zz,HzHz_true,r,epsilon);
 %Vector Fitting
 count_VFt = 0;
 converged = false; diverged = false;
@@ -118,6 +119,7 @@ while ~converged && ~diverged
 end
 Avft = full(SERt.A); Bvft = SERt.B; Cvft = SERt.C;
 %% Construct system objects and functions to check errors
+% Ts = 1;
 fprintf('Constructing system objects...\n')
 %system objects from approximated data
 sysd_Low = ss(Ep2\Ap2,Ep2\Bp2,Cp2,0,Ts);
