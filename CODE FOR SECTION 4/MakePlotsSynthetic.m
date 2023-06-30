@@ -1,39 +1,35 @@
 % Script to make plots for the synthetic random example
 
 load Rand1000.mat
+n_true = length(A);
 
-fs = 1e3;%1e3?
-Ts = 1/fs;
-t_end = 2;
-
-[A, B, C, D] = ConvDiscSISO(A,B,C,D,Ts);
-t_eval = 0:Ts:t_end;
-T = length(t_eval);
-U = randn(T,1);
-Y = runDTSys(A,B,C,D,U,t_eval);
+% T = 1000;
+% t_eval = 0:T;
+% U = randn(T+1,1);
+% Y = runDTSys(A,B,C,D,U,t_eval);
+load Reproduce_MakePlotsSynthetic.mat;
 
 num = 400;
 log_min_freq = -2; %lowest frequency/Ts wanted in frequency range
 freqs = logspace(log_min_freq,log10(.99*pi),num);
-r = 1; % radius of points
-z = r*exp(1i*freqs);
+z = exp(1i*freqs);
 
 
 clear opts
-opts.tol = 10^(-1);
-opts.noise = false;
 opts.der_order = 1;
-opts.num_est = 20;
+opts.num_windows = 20;
+opts.num_windows_keep = 10;
+opts.tau1 = 10^-10;
+opts.tau2 = 10^-10;
 
 %%
 tic
-[Hz,nstd_Hz,cond_nums,residuals,LS_vec,opts] = CalculateTFVals(U,Y,z,opts);
+[Hz,nstd_Hz,cond_nums,residuals,opts] = CalculateTFVals(U,Y,z,opts);
 toc
 %%
 num = length(z);
-sysd = ss(A,B,C,D,Ts);
 
-I = eye(length(A));
+I = eye(n_true);
 H = @(s) C*((s*I-A)\B);
 Hp = @(s) C*((s*I-A)\(-I*((s*I-A)\B)));
 H_true = zeros(num,1);
@@ -102,7 +98,7 @@ relerr = abs(Hz(:,1)-H_true)./abs(H_true);
 loglog(freqs,relerr,'LineWidth',2)
 hold on
 loglog(freqs,nstd_Hz(:,1),'LineWidth',2)
-legend('$\epsilon_{rel}$','NSTD','Interpreter',...
+legend('$\epsilon_{rel}$','$s_W$','Interpreter',...
     'latex','Location','northwest')
 xlim([10^(-2),pi])
 ax = gca;
@@ -119,7 +115,7 @@ relerrp = abs(Hz(:,2)-Hp_true)./abs(Hp_true);
 loglog(freqs,relerrp,'LineWidth',2)
 hold on
 loglog(freqs,nstd_Hz(:,2),'LineWidth',2)
-legend('$\epsilon_{rel}$','NSTD','Interpreter',...
+legend('$\epsilon_{rel}$','$s_W$','Interpreter',...
     'latex','Location','northwest')
 xlim([10^(-2),pi])
 ax = gca;
@@ -132,21 +128,20 @@ xlabel('$\omega$','Interpreter','latex','FontSize',20)
 
 
 
-%% I dont think this is really good to add to the paper, it doesnt really add anything
-% Plot the relative derivative
-figure;
-relder = abs(Hp_true)./abs(H_true);
-loglog(freqs,relder,'LineWidth',2)
-%legend('$\frac{H''(e^{\mathbf i \omega})}{H(e^{\mathbf i \omega})}$','Interpreter',...
-%    'latex','Location','northwest')
-xlim([10^(-2),pi])
-ax = gca;
-Default_TW = ax.TickLength;
-Default_LW = ax.LineWidth;
-ax.TickLength = Default_TW * 2;
-ax.LineWidth = Default_LW * 2;
-ax.FontSize = 16;
-xlabel('$\omega$','Interpreter','latex','FontSize',20)
-ylabel('$\frac{H''(e^{\mathbf i \omega})}{H(e^{\mathbf i \omega})}$','Interpreter',...
-    'latex')
+% % Plot the relative derivative
+% figure;
+% relder = abs(Hp_true)./abs(H_true);
+% loglog(freqs,relder,'LineWidth',2)
+% %legend('$\frac{H''(e^{\mathbf i \omega})}{H(e^{\mathbf i \omega})}$','Interpreter',...
+% %    'latex','Location','northwest')
+% xlim([10^(-2),pi])
+% ax = gca;
+% Default_TW = ax.TickLength;
+% Default_LW = ax.LineWidth;
+% ax.TickLength = Default_TW * 2;
+% ax.LineWidth = Default_LW * 2;
+% ax.FontSize = 16;
+% xlabel('$\omega$','Interpreter','latex','FontSize',20)
+% ylabel('$\frac{H''(e^{\mathbf i \omega})}{H(e^{\mathbf i \omega})}$','Interpreter',...
+%     'latex')
 
