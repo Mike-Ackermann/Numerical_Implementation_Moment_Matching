@@ -1,5 +1,5 @@
 %Constructs ROMs to the fully discretized heat model and compares 
-% .
+
 
 %% construct data to use to find estimates of transfer function values
 fprintf('Generating data...\n')
@@ -7,27 +7,25 @@ load heat-disc.mat
 A = full(E\A); B = full(E\B); C = full(C);
 D = 0;
 
-fs = 1e3;%1e3?
-Ts = 1/fs;
-t_end = 1;
+n_true = length(A);
 
-t_eval = 0:Ts:t_end;
-T = length(t_eval);
-U = randn(T,1);
-Y = runDTSys(A,B,C,D,U,t_eval);
+% T = 1000;
+% t_eval = 0:T;
+% U = randn(T+1,1);
+% Y = runDTSys(A,B,C,D,U,t_eval);
+load Reproduce_HeatModel.mat
 
 red = 10;
-freqs = logspace(-4,log10(.99*pi),50*red);
-%freqs = [freqs 1.5 .99*pi];
-num = length(freqs);
-r = 1; % radius of points
-z = r*exp(1i*freqs);
+num = 50*red;
+freqs = logspace(-4,log10(.99*pi),num);
+z = exp(1i*freqs);
 
 clear opts
-opts.tol = 10^(-1);
 opts.der_order = 1;
-opts.num_est = 10;
-%opts.n = 300; %set n to 300 to follow section on estimating moments
+opts.num_windows = 20;
+opts.num_windows_keep = 10;
+opts.tau1 = 10^-10;
+opts.tau2 = 10^-10;
 
 %% Calulate Transfer Function Estimates
 fprintf('Calculating frequency data\n')
@@ -41,16 +39,11 @@ z_WC = [z.';conj(z.')];
 [~,idx] = sort(z_WC,'ComparisonMethod','real');
 Hz_WC = Hz_WC(idx,:);
 z_WC = z_WC(idx,:);
-
-%Hz_WC = Hz_WC_cheat;
-
-
 %% Construct 3 ROMS from estimated data
 fprintf('Constructing ROMs from learned data...\n')
-nmax = red;
 %Hermite Loewner
 epsilon = 1e-8;
-[Ap1,Bp1,Cp1,Ep1] = HermiteLoewner(z_WC,Hz_WC(:,1),Hz_WC(:,2),nmax,epsilon);
+[Ap1,Bp1,Cp1,Ep1] = HermiteLoewner(z_WC,Hz_WC(:,1),Hz_WC(:,2),red,epsilon);
 %Loewner
 % change order of interpolation points to interweve
 zz = [z.';conj(z.')];
@@ -61,18 +54,18 @@ HzHz = [HzHz(1:2:end);HzHz(2:2:end)];
 zz = zz([idx2;idx2+length(z)]);
 HzHz = HzHz([idx2;idx2+length(z)]);
 
-[Ap2,Bp2,Cp2,Ep2] = Loewner(zz,HzHz,nmax,epsilon);
+[Ap2,Bp2,Cp2,Ep2] = Loewner(zz,HzHz,red,epsilon);
 
 % Vector Fitting
-eval_freqs = [freqs.';-freqs.']/Ts;
+eval_freqs = [freqs.';-freqs.'];
 eval_freqs = eval_freqs(idx);
 
 opts2.spy1=0; opts2.spy2=0; opts2.cmplx_ss = 0;
 n_iter = 100;
 tolVF = 1e-5;
 weights = ones(1,num*2); %dont weight
-%initl_poles = 1*exp((1:nmax)*2*pi*1i/nmax); %set initial poles inside upper unit circle
-initl_poles = exp(1i*logspace(-1,pi,nmax/2));
+%initl_poles = 1*exp((1:red)*2*pi*1i/red); %set initial poles inside upper unit circle
+initl_poles = exp(1i*logspace(-1,pi,red/2));
 initl_poles = [initl_poles, conj(initl_poles)];
 initl_poles = sort(initl_poles,'ComparisonMethod','real');
 count_VF = 0;
@@ -81,7 +74,7 @@ poles = initl_poles;
 while ~converged && ~diverged
     count_VF = count_VF + 1;
     [SER,poles,rmserr,~,~]=...
-        vectfit3_discrete(Hz_WC(:,1).',eval_freqs.',poles,weights,Ts,opts2);
+        vectfit3_discrete(Hz_WC(:,1).',eval_freqs.',poles,weights,opts2);
     converged = rmserr < tolVF;
     diverged = count_VF > n_iter;
 end
@@ -90,6 +83,7 @@ Avf = full(SER.A); Bvf = SER.B; Cvf = SER.C;
 fprintf('Constructing ROMs from true data...\n')
 
 %generate true data
+Ts = 1;
 sysd = ss(A,B,C,D,Ts);
 I = eye(length(A));
 Hp_func = @(s) C*((s*I-A)\(-I*((s*I-A)\B)));
@@ -104,9 +98,9 @@ parfor i = 1:num*2
 end
 
 %Hermite Loewner
-[Ap1t,Bp1t,Cp1t,Ep1t] = HermiteLoewner(z_WC,H_interp_true,Hp_true,nmax,epsilon);
+[Ap1t,Bp1t,Cp1t,Ep1t] = HermiteLoewner(z_WC,H_interp_true,Hp_true,red,epsilon);
 %Loewner
-[Ap2t,Bp2t,Cp2t,Ep2t] = Loewner(zz,HzHz_true,nmax,epsilon);
+[Ap2t,Bp2t,Cp2t,Ep2t] = Loewner(zz,HzHz_true,red,epsilon);
 %Vector Fitting
 count_VFt = 0;
 converged = false; diverged = false;
@@ -114,7 +108,7 @@ polest = initl_poles;
 while ~converged && ~diverged
     count_VFt = count_VFt + 1;
     [SERt,polest,rmserrt,~,~]=...
-        vectfit3_discrete(H_interp_true.',eval_freqs,polest,weights,Ts,opts2);
+        vectfit3_discrete(H_interp_true.',eval_freqs,polest,weights,opts2);
     converged = rmserrt < tolVF;
     diverged = count_VFt > n_iter;
 end
@@ -166,13 +160,14 @@ fprintf('Error in learned transfer function derivatives: %e\n',err_interp_der)
 
 
 %% Calculate trajectory for input to compare
-U_comp = sawtooth(2*pi*10*t_eval);
+t_eval_test = 0:(1e-3):1;
+U_comp = sawtooth(2*pi*10*t_eval_test);
 %U_comp = chirp(t_eval,1e-3,t_end,fs/10,'linear');
 
-Y_true = runDTSys(A,B,C,D,U_comp,t_eval);
-Y_low = runDTSys(Ep2\Ap2,Ep2\Bp2,Cp2,D,U_comp,t_eval);
-Y_Hlow = runDTSys(Ep1\Ap1,Ep1\Bp1,Cp1,D,U_comp,t_eval);
-Y_VF = runDTSys(Avf,Bvf,Cvf,D,U_comp,t_eval);
+Y_true = runDTSys(A,B,C,D,U_comp,t_eval_test);
+Y_low = runDTSys(Ep2\Ap2,Ep2\Bp2,Cp2,D,U_comp,t_eval_test);
+Y_Hlow = runDTSys(Ep1\Ap1,Ep1\Bp1,Cp1,D,U_comp,t_eval_test);
+Y_VF = runDTSys(Avf,Bvf,Cvf,D,U_comp,t_eval_test);
 
 %% Plot output responses
 %plot bode plot from estimated data
@@ -181,11 +176,11 @@ Y_VF = runDTSys(Avf,Bvf,Cvf,D,U_comp,t_eval);
 load ColorMat.mat
 
 figure
-plot(t_eval,Y_true,'k','LineWidth',2)
+plot(t_eval_test,Y_true,'k','LineWidth',2)
 hold on
-plot(t_eval, Y_VF,'-.','Color',ColorMat(1,:),'LineWidth',2)
-plot(t_eval, Y_low,'--','Color',ColorMat(2,:),'LineWidth',2)
-plot(t_eval, Y_Hlow,':','Color',ColorMat(3,:),'LineWidth',2)
+plot(t_eval_test, Y_VF,'-.','Color',ColorMat(1,:),'LineWidth',2)
+plot(t_eval_test, Y_low,'--','Color',ColorMat(2,:),'LineWidth',2)
+plot(t_eval_test, Y_Hlow,':','Color',ColorMat(3,:),'LineWidth',2)
 legend('$Y$','$\hat Y_r^{VF}$','$\hat Y_r^{L}$','$\hat Y_r^{HL}$',...
     'interpreter','latex','Orientation','horizontal')
 
@@ -197,16 +192,9 @@ ax.TickLength = Default_TW * 2;
 ax.LineWidth = Default_LW * 2;
 %change font size
 ax.FontSize = 14;
-%specify tick location and labels
-%xticks([1e-2,1e-1,pi])
-%xticklabels({'10^{-2}','10^{-1}','\pi'})
 xlabel('time (seconds)','interpreter','latex','fontsize',25)
-%set limits of plot
-%xlim([1e-2,pi])
-%labels
 ylabel('$\hat Y^x_r[t]$','interpreter','latex','fontsize',20)
 yticks([-.04,-.02,0,.02,.04])
-% xlabel('$r$','interpreter','latex','fontsize',30)
 lgd = legend();
 lgd.Location = 'north';
 
@@ -218,14 +206,12 @@ err_Hlow = Y_Hlow-Y_true;
 
 %plot errors from estiamted data
 figure
-%loglog(freqs_plt_interp,err_interp,'LineWidth',2)
-plot(t_eval, err_VF,'LineWidth',2)
+plot(t_eval_test, err_VF,'LineWidth',2)
 hold on
-plot(t_eval, err_Low,'LineWidth',2)
-plot(t_eval, err_Hlow,'LineWidth',2)
+plot(t_eval_test, err_Low,'LineWidth',2)
+plot(t_eval_test, err_Hlow,'LineWidth',2)
 legend('$\hat Y_r^{VF}$','$\hat Y_r^{L}$','$\hat Y_r^{HL}$',...
     'interpreter','latex','Orientation','horizontal')
-%title('Relative error at random points on unit circle estiamted data')
 
 ax = gca;
 Default_TW = ax.TickLength;
@@ -235,18 +221,10 @@ ax.TickLength = Default_TW * 2;
 ax.LineWidth = Default_LW * 2;
 %change font size
 ax.FontSize = 14;
-%specify tick location and labels
-%xticks([freqs_plt(1),1e-1,pi])
-%xticks([1e-2,1e-1,pi])
-%xticklabels({'10^{-2}','10^{-1}','\pi'})
-%set limits of plot
 xlabel('time (seconds)','interpreter','latex','fontsize',25)
-%xlim([1e-2,pi])
-%labels
 ylim([-2.5e-9,1.8e-9])
 yticks([-2,-1,0,1]*1e-9)
 ylabel('$Y[t]-\hat Y_r^x[t]$','interpreter','latex','fontsize',20)
-% xlabel('$r$','interpreter','latex','fontsize',30)
 lgd = legend();
 lgd.Location = 'north';
 
