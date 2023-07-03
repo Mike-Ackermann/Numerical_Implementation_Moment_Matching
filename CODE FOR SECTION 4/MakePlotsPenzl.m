@@ -1,37 +1,19 @@
 % Script for generating plots for the Penzl example
 
 load Penzl_disc.mat
-
-fs = 1e4;%1e3?
-Ts = 1/fs;
-t_end = 10;
-
-t_eval = 0:Ts:t_end;
-T = length(t_eval);
-%U = FiltNoise(fs,t_end);
-%U = randn(T,1);
-%Y = runDTSys(A,B,C,D,U,t_eval);
-load BestInput_Penzl.mat
+n_true = length(A);
+% T = 10000;
+% t_eval = 0:T;
+% U = randn(T+1,1);
+% Y = runDTSys(A,B,C,D,U,t_eval);
+% load Reproduce_Penzl.mat
 
 num = 140;
-log_min_freq = -4; %lowest frequency/Ts wanted in frequency range
+log_min_freq = -4; %lowest frequency wanted in frequency range
 freqs = logspace(log_min_freq,log10(.99*pi),num);
-r = 1; % radius of points
-z = r*exp(1i*freqs);
+z = exp(1i*freqs);
 
-clear opts
-opts.tol = 10^(-1);
-opts.noise = false;
-opts.der_order = 0;
-opts.num_est = 20;
-
-%% Plot for n = nhat
-fprintf('Plot for nhat\n')
-tic
-[Hz_nhat,nstd_Hz,cond_nums,residuals,LS_vec,opts] = CalculateTFVals(U,Y,z,opts);
-toc
-num = length(z);
-n_true = length(A);
+% calculate true values for error calculations
 I = eye(n_true);
 H = @(s) C*((s*I-A)\B);
 Hp = @(s) C*((s*I-A)\(-I*((s*I-A)\B)));
@@ -41,23 +23,27 @@ parfor i = 1:num
     H_true(i) = H(z(i));
     Hp_true(i) = Hp(z(i));
 end
-H_true(abs(H_true) < 1e-15) = Hz_nhat(abs(H_true) < 1e-15);
+%% Plot for n = nhat
+clear opts
+opts.der_order = 1;
+opts.num_windows = 20;
+opts.num_windows_keep = 10;
+opts.tau1 = 10^-10;
+opts.tau2 = 10^-10;
+fprintf('Plot for nhat\n')
+
+tic
+[Hz_nhat,nstd_Hz,cond_nums,residuals,opts] = CalculateTFVals(U,Y,z,opts);
+toc
 
 % Calculate and report error
 err = abs(Hz_nhat(:,1)-H_true);
-err2 = norm(err);
 err2rel = norm(err)/norm(H_true);
-%% plot
-fprintf('2-norm error in TF estimates         : %.5e\n',err2)
 fprintf('Relative 2-norm error in TF estimates: %.5e\n',err2rel)
-if opts.der_order == 1
-    err_der = abs(Hz_nhat(:,2)-Hp_true);
-    err2D = norm(err_der);
-    err2relD = norm(err_der)/norm(Hp_true);
-    fprintf('2-norm error in Derivative TF estimates         : %.5e\n',err2D)
-    fprintf('Relative 2-norm error in Derivative TF estimates: %.5e\n',err2relD)
-end
-
+err_der = abs(Hz_nhat(:,2)-Hp_true);
+err2relD = norm(err_der)/norm(Hp_true);
+fprintf('Relative 2-norm error in Derivative TF estimates: %.5e\n',err2relD)
+%% plot
 %plot value estimates on top of true
 figure;
 loglog(freqs,abs(H_true),'LineWidth',2)
@@ -81,7 +67,7 @@ relerr = abs(Hz_nhat(:,1)-H_true)./abs(H_true);
 loglog(freqs,relerr,'LineWidth',2)
 hold on
 loglog(freqs,nstd_Hz(:,1),'LineWidth',2)
-legend('$\epsilon_{rel}$','NSTD','Interpreter',...
+legend('$\epsilon_{rel}$','$s_W$','Interpreter',...
     'latex','Location','northwest')
 xlim([10^(-4),pi])
 ax = gca;
@@ -94,45 +80,25 @@ xlabel('$\omega$','Interpreter','latex','FontSize',20)
 %% Upping n to 300
 fprintf('Plot for n = 300\n')
 clear opts
-opts.tol = 10^(-1);
-opts.noise = false;
-opts.der_order = 0;
-opts.num_est = 20;
-
+opts.der_order = 1;
+opts.num_windows = 20;
+opts.num_windows_keep = 10;
+opts.tau1 = 10^-10;
+opts.tau2 = 10^-10;
 opts.n = 300;
 
 tic
-[Hz_300,nstd_Hz,cond_nums,residuals,LS_vec,opts] = CalculateTFVals(U,Y,z,opts);
+[Hz_300,nstd_Hz,cond_nums,residuals,opts] = CalculateTFVals(U,Y,z,opts);
 toc
-
-num = length(z);
-n_true = length(A);
-I = eye(n_true);
-H = @(s) C*((s*I-A)\B);
-Hp = @(s) C*((s*I-A)\(-I*((s*I-A)\B)));
-H_true = zeros(num,1);
-Hp_true = zeros(num,1);
-parfor i = 1:num
-    H_true(i) = H(z(i));
-    Hp_true(i) = Hp(z(i));
-end
-%if close to eps, just set them equal
-H_true(abs(H_true) < 1e-15) = Hz_300(abs(H_true) < 1e-15);
 
 % Calculate and report error
 err = abs(Hz_300(:,1)-H_true);
-err2 = norm(err);
 err2rel = norm(err)/norm(H_true);
-
-fprintf('2-norm error in TF estimates         : %.5e\n',err2)
 fprintf('Relative 2-norm error in TF estimates: %.5e\n',err2rel)
-if opts.der_order == 1
-    err_der = abs(Hz_300(:,2)-Hp_true);
-    err2D = norm(err_der);
-    err2relD = norm(err_der)/norm(Hp_true);
-    fprintf('2-norm error in Derivative TF estimates         : %.5e\n',err2D)
-    fprintf('Relative 2-norm error in Derivative TF estimates: %.5e\n',err2relD)
-end
+
+err_der = abs(Hz_300(:,2)-Hp_true);
+err2relD = norm(err_der)/norm(Hp_true);
+fprintf('Relative 2-norm error in Derivative TF estimates: %.5e\n',err2relD)
 %% plot
 %plot value estimates on top of true
 figure;
@@ -157,7 +123,7 @@ relerr_300 = abs(Hz_300(:,1)-H_true)./abs(H_true);
 loglog(freqs,relerr_300,'LineWidth',2)
 hold on
 loglog(freqs,nstd_Hz(:,1),'LineWidth',2)
-legend('$\epsilon_{rel}$','NSTD','Interpreter',...
+legend('$\epsilon_{rel}$','$s_W$','Interpreter',...
     'latex','Location','northwest')
 xlim([10^(-4),pi])
 ax = gca;
@@ -169,49 +135,35 @@ ax.FontSize = 16;
 xlabel('$\omega$','Interpreter','latex','FontSize',20)
 
 %% Up to n = 1006
+% Might take a very long time!
+% can uncomment: 
+% load Penzl1006_data.mat 
+% and comment out call to CalculateTFValues.m to plot quickly
+% for precomputed data
 
 fprintf('Plot for n = 1006\n')
 clear opts
-opts.tol = 10^(-1);
-opts.noise = false;
 opts.der_order = 1;
-opts.num_est = 10;
-
+opts.num_windows = 20;
+opts.num_windows_keep = 10;
+opts.tau1 = 10^-10;
+opts.tau2 = 10^-10;
 opts.n = 1006;
 
 tic
-[Hz_1006,nstd_Hz_1006,cond_nums_1006,residuals_1006,LS_vec_1006,opts] = CalculateTFVals(U,Y,z,opts);
+[Hz_1006,nstd_Hz_1006,cond_nums_1006,residuals_1006,opts] = CalculateTFVals(U,Y,z,opts);
 toc
-%load Data_Files/Penzl1006_data.mat
-
-num = length(z);
-n_true = length(A);
-I = eye(n_true);
-H = @(s) C*((s*I-A)\B);
-Hp = @(s) C*((s*I-A)\(-I*((s*I-A)\B)));
-H_true = zeros(num,1);
-Hp_true = zeros(num,1);
-parfor i = 1:num
-    H_true(i) = H(z(i));
-    Hp_true(i) = Hp(z(i));
-end
-%if close to eps, just set them equal
-H_true(abs(H_true) < 1e-15) = Hz_1006(abs(H_true) < 1e-15);
+% load Penzl1006_data.mat
 
 % Calculate and report error
 err = abs(Hz_1006(:,1)-H_true);
-err2 = norm(err);
 err2rel = norm(err)/norm(H_true);
-
-fprintf('2-norm error in TF estimates         : %.5e\n',err2)
 fprintf('Relative 2-norm error in TF estimates: %.5e\n',err2rel)
-if opts.der_order == 1
-    err_der = abs(Hz_1006(:,2)-Hp_true);
-    err2D = norm(err_der);
-    err2relD = norm(err_der)/norm(Hp_true);
-    fprintf('2-norm error in Derivative TF estimates         : %.5e\n',err2D)
-    fprintf('Relative 2-norm error in Derivative TF estimates: %.5e\n',err2relD)
-end
+
+err_der = abs(Hz_1006(:,2)-Hp_true);
+err2relD = norm(err_der)/norm(Hp_true);
+fprintf('Relative 2-norm error in Derivative TF estimates: %.5e\n',err2relD)
+
 %% plot
 %plot value estimates on top of true
 figure;
@@ -236,7 +188,7 @@ relerr_1006 = abs(Hz_1006(:,1)-H_true)./abs(H_true);
 loglog(freqs,relerr_1006,'LineWidth',2)
 hold on
 loglog(freqs,nstd_Hz_1006(:,1),'LineWidth',2)
-legend('$\epsilon_{rel}$','NSTD','Interpreter',...
+legend('$\epsilon_{rel}$','$s_W$','Interpreter',...
     'latex','Location','northwest')
 xlim([10^(-4),pi])
 ax = gca;
@@ -246,153 +198,3 @@ ax.TickLength = Default_TW * 2;
 ax.LineWidth = Default_LW * 2;
 ax.FontSize = 16;
 xlabel('$\omega$','Interpreter','latex','FontSize',20)
-
-%% Change input to cosine
-% fprintf('Plot for cos input\n')
-% 
-% %freqs = [10^(-3.9),10^(-3.5)];
-% freqs = logspace(-3.9,-3.5,10);
-% acurate_num = freqs;
-% U = multiCos(t_eval,fs,freqs);
-% Y = runDTSys(A,B,C,D,U,t_eval);
-% 
-% num = 100;
-% log_min_freq = -4; %lowest frequency/Ts wanted in frequency range
-% freqs = logspace(log_min_freq,log10(.99*pi),num);
-% freqs = sort([freqs, acurate_num]);
-% r = 1; % radius of points
-% z = r*exp(1i*freqs);
-% 
-% clear opts
-% opts.tol = 10^(-1);
-% opts.noise = false;
-% opts.der_order = 0;
-% opts.num_est = 10;
-% opts.n = 300;
-% opts.t0 = 6e4;
-% 
-% tic
-% [Hz_300cos,nstd_Hz_300cos,cond_nums,residuals,LS_vec,opts] = CalculateTFVals(U,Y,z,opts);
-% toc
-% num = length(z);
-% n_true = length(A);
-% I = eye(n_true);
-% H = @(s) C*((s*I-A)\B);
-% Hp = @(s) C*((s*I-A)\(-I*((s*I-A)\B)));
-% H_true = zeros(num,1);
-% Hp_true = zeros(num,1);
-% for i = 1:num
-%     H_true(i) = H(z(i));
-%     Hp_true(i) = Hp(z(i));
-% end
-% %if close to eps, just set them equal
-% H_true(abs(H_true) < 1e-15) = Hz_300cos(abs(H_true) < 1e-15);
-% 
-% % Calculate and report error
-% err = abs(Hz_300cos(:,1)-H_true);
-% err2 = norm(err);
-% err2rel = norm(err)/norm(H_true);
-% 
-% fprintf('2-norm error in TF estimates         : %.5e\n',err2)
-% fprintf('Relative 2-norm error in TF estimates: %.5e\n',err2rel)
-% if opts.der_order == 1
-%     err_der = abs(Hz_300cos(:,2)-Hp_true);
-%     err2D = norm(err_der);
-%     err2relD = norm(err_der)/norm(Hp_true);
-%     fprintf('2-norm error in Derivative TF estimates         : %.5e\n',err2D)
-%     fprintf('Relative 2-norm error in Derivative TF estimates: %.5e\n',err2relD)
-% end
-% 
-% %plot value estimates on top of true
-% figure;
-% loglog(freqs,abs(H_true),'LineWidth',2)
-% hold on
-% loglog(freqs,abs(Hz_300cos(:,1)),'--','LineWidth',2)
-% legend('True $H(e^{\mathbf i \omega})$',...
-%     'Learned $H(e^{\mathbf i \omega})$','Interpreter',...
-%     'latex','Location','northwest')
-% xlim([10^(-4),pi])
-% ax = gca;
-% Default_TW = ax.TickLength;
-% Default_LW = ax.LineWidth;
-% ax.TickLength = Default_TW * 2;
-% ax.LineWidth = Default_LW * 2;
-% ax.FontSize = 16;
-% xlabel('$\omega$','Interpreter','latex','FontSize',20)
-% 
-% % Plot error vs standard deviation
-% figure;
-% relerr = abs(Hz_300cos(:,1)-H_true)./abs(H_true);
-% loglog(freqs,relerr,'LineWidth',2)
-% hold on
-% loglog(freqs,nstd_Hz_300cos(:,1),'LineWidth',2)
-% legend('$\epsilon_{rel}$','NSTD','Interpreter',...
-%     'latex','Location','northwest')
-% xlim([10^(-4),pi])
-% ax = gca;
-% Default_TW = ax.TickLength;
-% Default_LW = ax.LineWidth;
-% ax.TickLength = Default_TW * 2;
-% ax.LineWidth = Default_LW * 2;
-% ax.FontSize = 16;
-% xlabel('$\omega$','Interpreter','latex','FontSize',20)
-
-%% Try Cosine convergence
-% 
-% freqs = 10^(-3.75);
-% U = multiCos(t_eval,fs,freqs);
-% Y = runDTSys(A,B,C,D,U,t_eval);
-% 
-% r = 1; % radius of points
-% z = r*exp(1i*freqs);
-% 
-% clear opts
-% opts.tol = 10^(-1);
-% opts.noise = false;
-% opts.der_order = 0;
-% opts.num_est = 10;
-% opts.t0 = 6e4;
-% 
-% n_vec = [100,200,300,400,500,600,700];
-% num_n = length(n_vec);
-% Hz_n = nan(num_n,1);
-% nstd_Hz_n = nan(num_n,1);
-% tic
-% for k = 1:num_n
-%     opts.n = n_vec(k);
-%     [Hz,nstd_Hz,cond_nums,residuals,opts] = CalculateTFVals(U,Y,z,opts);
-%     Hz_n(k) = Hz;
-%     nstd_Hz_n(k) = nstd_Hz;
-% end
-% toc
-% num = length(z);
-% n_true = length(A);
-% I = eye(n_true);
-% H = @(s) C*((s*I-A)\B);
-% Hp = @(s) C*((s*I-A)\(-I*((s*I-A)\B)));
-% H_true = zeros(num,1);
-% Hp_true = zeros(num,1);
-% for i = 1:num
-%     H_true(i) = H(z(i));
-%     Hp_true(i) = Hp(z(i));
-% end
-% %if close to eps, just set them equal
-% H_true(abs(H_true) < 1e-15) = Hz_300cos(abs(H_true) < 1e-15);
-% 
-% %plot error decay vs n
-% relerr_n = abs(Hz_n-H_true)/abs(H_true);
-% figure;
-% semilogy(n_vec,abs(relerr_n),'-*','LineWidth',2)
-% hold on
-% semilogy(n_vec,abs(nstd_Hz_n),'-*','LineWidth',2)
-% legend('$\epsilon_{rel}$',...
-%     'NSTD','Interpreter',...
-%     'latex','Location','northwest')
-% ax = gca;
-% Default_TW = ax.TickLength;
-% Default_LW = ax.LineWidth;
-% ax.TickLength = Default_TW * 2;
-% ax.LineWidth = Default_LW * 2;
-% ax.FontSize = 16;
-% xlabel('$n$','Interpreter','latex','FontSize',20)
-% 
