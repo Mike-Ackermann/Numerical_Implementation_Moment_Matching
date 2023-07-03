@@ -6,7 +6,7 @@ n_true = length(A);
 % t_eval = 0:T;
 % U = randn(T+1,1);
 % Y = runDTSys(A,B,C,D,U,t_eval);
-% load Reproduce_Penzl.mat
+load Reproduce_Penzl.mat
 
 num = 140;
 log_min_freq = -4; %lowest frequency wanted in frequency range
