@@ -3,11 +3,12 @@
 load Rand1000.mat
 n_true = length(A);
 
-% T = 1000;
-% t_eval = 0:T;
-% U = randn(T+1,1);
-% Y = runDTSys(A,B,C,D,U,t_eval);
-load Reproduce_MakePlotsSynthetic.mat;
+rng(287346238);
+T = 1000;
+t_eval = 0:T;
+U = randn(T+1,1);
+Y = runDTSys(A,B,C,D,U,t_eval);
+% load Reproduce_MakePlotsSynthetic.mat;
 
 num = 400;
 log_min_freq = -2; %lowest frequency/Ts wanted in frequency range
@@ -21,6 +22,7 @@ opts.num_windows = 20;
 opts.num_windows_keep = 10;
 opts.tau1 = 10^-10;
 opts.tau2 = 10^-10;
+opts.skip_condition_numbers = true;
 
 %%
 tic
@@ -38,21 +40,19 @@ parfor i = 1:num
     H_true(i) = H(z(i));
     Hp_true(i) = Hp(z(i));
 end
-%if close to eps, just set them equal
-H_true(abs(H_true) < 1e-15) = Hz(abs(H_true) < 1e-15);
+
 
 %% Calculate and report error
 err = abs(Hz(:,1)-H_true);
 err2 = norm(err);
 err2rel = norm(err)/norm(H_true);
 
-fprintf('2-norm error in TF estimates         : %.5e\n',err2)
+%fprintf('2-norm error in TF estimates         : %.5e\n',err2)
 fprintf('Relative 2-norm error in TF estimates: %.5e\n',err2rel)
 if opts.der_order == 1
     err_der = abs(Hz(:,2)-Hp_true);
     err2D = norm(err_der);
     err2relD = norm(err_der)/norm(Hp_true);
-    fprintf('2-norm error in Derivative TF estimates         : %.5e\n',err2D)
     fprintf('Relative 2-norm error in Derivative TF estimates: %.5e\n',err2relD)
 end
 
@@ -61,8 +61,8 @@ figure;
 loglog(freqs,abs(H_true),'LineWidth',2)
 hold on
 loglog(freqs,abs(Hz(:,1)),'--','LineWidth',2)
-legend('True $|H(e^{\mathbf i \omega})|$',...
-    'Recovered $|H(e^{\mathbf i \omega})|$','Interpreter',...
+legend('$|H(e^{\mathbf i \omega})|$',...
+    '$|M_0(e^{\mathbf i \omega})|$','Interpreter',...
     'latex','Location','northwest')
 xlim([10^(-2),pi])
 ax = gca;
@@ -79,8 +79,8 @@ figure;
 loglog(freqs,abs(Hp_true),'LineWidth',2)
 hold on
 loglog(freqs,abs(Hz(:,2)),'--','LineWidth',2)
-legend('True $|H''(e^{\mathbf i \omega})|$',...
-    'Recovered $|H''(e^{\mathbf i \omega})|$','Interpreter',...
+legend('$|H''(e^{\mathbf i \omega})|$',...
+    '$|M_1(e^{\mathbf i \omega})|$','Interpreter',...
     'latex','Location','northwest')
 xlim([10^(-2),pi])
 ax = gca;
