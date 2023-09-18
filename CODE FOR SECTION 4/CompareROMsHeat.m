@@ -9,15 +9,17 @@ D = 0;
 
 n_true = length(A);
 
-% T = 1000;
-% t_eval = 0:T;
-% U = randn(T+1,1);
-% Y = runDTSys(A,B,C,D,U,t_eval);
-load Reproduce_HeatModel.mat
+rng(29384234)
+T = 1000;
+t_eval = 0:T;
+U = randn(T+1,1);
+Y = runDTSys(A,B,C,D,U,t_eval);
+% load Reproduce_HeatModel.mat
 
 red = 10;
 num = 50*red;
 freqs = logspace(-4,log10(.99*pi),num);
+
 z = exp(1i*freqs);
 
 clear opts
@@ -26,6 +28,8 @@ opts.num_windows = 20;
 opts.num_windows_keep = 10;
 opts.tau1 = 10^-10;
 opts.tau2 = 10^-10;
+opts.skip_condition_numbers = true;
+
 
 %% Calulate Transfer Function Estimates
 fprintf('Calculating frequency data\n')
@@ -54,7 +58,7 @@ HzHz = [HzHz(1:2:end);HzHz(2:2:end)];
 zz = zz([idx2;idx2+length(z)]);
 HzHz = HzHz([idx2;idx2+length(z)]);
 
-[Ap2,Bp2,Cp2,Ep2] = Loewner(zz,HzHz,red,epsilon);
+[Ap2,Bp2,Cp2,Ep2] = Loewner_sylvester(zz,HzHz,red,epsilon);
 
 % Vector Fitting
 eval_freqs = [freqs.';-freqs.'];
@@ -100,7 +104,7 @@ end
 %Hermite Loewner
 [Ap1t,Bp1t,Cp1t,Ep1t] = HermiteLoewner(z_WC,H_interp_true,Hp_true,red,epsilon);
 %Loewner
-[Ap2t,Bp2t,Cp2t,Ep2t] = Loewner(zz,HzHz_true,red,epsilon);
+[Ap2t,Bp2t,Cp2t,Ep2t] = Loewner_sylvester(zz,HzHz_true,red,epsilon);
 %Vector Fitting
 count_VFt = 0;
 converged = false; diverged = false;
@@ -179,9 +183,9 @@ figure
 plot(t_eval_test,Y_true,'k','LineWidth',2)
 hold on
 plot(t_eval_test, Y_VF,'-.','Color',ColorMat(1,:),'LineWidth',2)
-plot(t_eval_test, Y_low,'--','Color',ColorMat(2,:),'LineWidth',2)
-plot(t_eval_test, Y_Hlow,':','Color',ColorMat(3,:),'LineWidth',2)
-legend('$Y$','$\hat Y_r^{VF}$','$\hat Y_r^{L}$','$\hat Y_r^{HL}$',...
+plot(t_eval_test, Y_low,'--','Color',ColorMat(3,:),'LineWidth',2)
+plot(t_eval_test, Y_Hlow,':','Color',ColorMat(2,:),'LineWidth',2)
+legend('$Y$','$\hat Y_{\texttt{VF}}$','$\hat Y_{\texttt{L}}$','$\hat Y_{\texttt{LH}}$',...
     'interpreter','latex','Orientation','horizontal')
 
 ax = gca;
@@ -193,7 +197,7 @@ ax.LineWidth = Default_LW * 2;
 %change font size
 ax.FontSize = 14;
 xlabel('time (seconds)','interpreter','latex','fontsize',25)
-ylabel('$\hat Y^x_r[t]$','interpreter','latex','fontsize',20)
+ylabel('$\hat Y_x[t]$','interpreter','latex','fontsize',20)
 yticks([-.04,-.02,0,.02,.04])
 lgd = legend();
 lgd.Location = 'north';
@@ -203,14 +207,14 @@ err_VF = Y_VF-Y_true;
 err_Low = Y_low-Y_true;
 err_Hlow = Y_Hlow-Y_true;
 
-
+load ColorMat.mat
 %plot errors from estiamted data
 figure
 plot(t_eval_test, err_VF,'LineWidth',2)
 hold on
-plot(t_eval_test, err_Low,'LineWidth',2)
-plot(t_eval_test, err_Hlow,'LineWidth',2)
-legend('$\hat Y_r^{VF}$','$\hat Y_r^{L}$','$\hat Y_r^{HL}$',...
+plot(t_eval_test, err_Low,'Color',ColorMat(3,:),'LineWidth',2)
+plot(t_eval_test, err_Hlow,'Color',ColorMat(2,:),'LineWidth',2)
+legend('$\hat Y_{\texttt{VF}}$','$\hat Y_{\texttt{L}}$','$\hat Y_{\texttt{LH}}$',...
     'interpreter','latex','Orientation','horizontal')
 
 ax = gca;
@@ -222,12 +226,11 @@ ax.LineWidth = Default_LW * 2;
 %change font size
 ax.FontSize = 14;
 xlabel('time (seconds)','interpreter','latex','fontsize',25)
-ylim([-2.5e-9,1.8e-9])
-yticks([-2,-1,0,1]*1e-9)
-ylabel('$Y[t]-\hat Y_r^x[t]$','interpreter','latex','fontsize',20)
+%ylim([-2.5e-9,1.8e-9])
+%yticks([-2,-1,0,1]*1e-9)
+ylabel('$Y[t]-\hat Y_x[t]$','interpreter','latex','fontsize',20)
 lgd = legend();
-lgd.Location = 'north';
-
+lgd.Location = 'south';
 
 %% System errors
 fprintf('Calculating system errors...\n')
@@ -247,28 +250,29 @@ H2_dist_Low = norm(sysd_Low-sysd_Lowt)/norm(sysd_Lowt);
 H2_dist_HerLow = norm(sysd_HerLow-sysd_HerLowt)/norm(sysd_HerLowt);
 H2_dist_VF = norm(sysd_VF-sysd_VFt)/norm(sysd_VFt);
 
-%H_inf from approximate data
+ %H_inf from approximate data
 Hinf_Sysd = norm(sysd,'inf');
 Hinf_Low = norm(sysd-sysd_Low,'inf')/Hinf_Sysd;
 Hinf_HerLow = norm(sysd-sysd_HerLow,'inf')/Hinf_Sysd;
 Hinf_VF = norm(sysd-sysd_VF,'inf')/Hinf_Sysd;
-
-
-%H_inf from true data
+ 
+ 
+ %H_inf from true data
 Hinf_Lowt = norm(sysd-sysd_Lowt,'inf')/Hinf_Sysd;
 Hinf_HerLowt = norm(sysd-sysd_HerLowt,'inf')/Hinf_Sysd;
 Hinf_VFt = norm(sysd-sysd_VFt,'inf')/Hinf_Sysd;
 
 %H_inf distance of ROM systems
-%Hinf_dist_HerLow = norm(sysd_HerLow-sysd_HerLowt,'inf')/norm(sysd_HerLowt,'inf');
-
+Hinf_dist_Low = norm(sysd_Low-sysd_Lowt,'inf')/norm(sysd_Lowt,'inf');
+Hinf_dist_HerLow = norm(sysd_HerLow-sysd_HerLowt,'inf')/norm(sysd_HerLowt,'inf');
+Hinf_dist_VF = norm(sysd_VF-sysd_VFt,'inf')/norm(sysd_VFt,'inf');
 %% Output Error norm results
 
 fprintf('------ H2 FROM APX ERRORS ------\n')
 fprintf('Low: %e, HerLow: %e, VF: %e\n',...
     H2_Low, H2_HerLow, H2_VF)
 fprintf('------ H2 FROM TRUE ERRORS ------\n')
-fprintf('Low: %e, HerLow: %e, VF: %e\n\n',...
+fprintf('Low: %e, HerLow: %e, VF: %e\n',...
     H2_Lowt, H2_HerLowt, H2_VFt)
 fprintf('------ H2 ROM DISTANCES ------\n')
 fprintf('Low: %e, HerLow: %e, VF: %e\n\n',...
@@ -279,16 +283,6 @@ fprintf('Low: %e, HerLow: %e, VF: %e\n',...
 fprintf('------ Hinf FROM TRUE ERRORS ------\n')
 fprintf('Low: %e, HerLow: %e, VF: %e\n',...
     Hinf_Lowt, Hinf_HerLowt, Hinf_VFt)
-
-%Matrix of H2 errors for converting to LaTex format
-%exclude loewner because not in thesis
-H2_err_mat = [H2_Low, H2_HerLow, H2_VF;...
-              H2_Lowt, H2_HerLowt, H2_VFt;...
-              H2_dist_Low H2_dist_HerLow, H2_dist_VF];
-
-%Hinf_err_mat = [Hinf_HerLow, Hinf_VF, Hinf_AAA;
-%                Hinf_HerLowt, Hinf_VFt, Hinf_AAAt;...
-%                Hinf_dist_HerLow, Hinf_dist_VF, Hinf_dist_AAA];
-
-%matrix2latex(H2_err_mat, 'H2_err_Synth.txt')
-%matrix2latex(Hinf_err_mat, 'Hinf_err_RandEx1_correct.txt')
+fprintf('------ Hinf ROM DISTANCES ------\n')
+fprintf('Low: %e, HerLow: %e, VF: %e\n',...
+    Hinf_dist_Low, Hinf_dist_HerLow, Hinf_dist_VF)
