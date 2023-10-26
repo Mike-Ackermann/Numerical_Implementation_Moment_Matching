@@ -1,4 +1,4 @@
-% Script to make plot
+% Script to generating plots 5 (a-d)
 
 load Rand1000.mat
 n_true = length(A);
@@ -8,7 +8,6 @@ T = 1000;
 t_eval = 0:T;
 U = randn(T+1,1);
 Y = runDTSys(A,B,C,D,U,t_eval);
-% load Reproduce_MakePlotsSynthetic.mat;
 
 num = 400;
 log_min_freq = -2; %lowest frequency/Ts wanted in frequency range
@@ -47,16 +46,13 @@ err = abs(Hz(:,1)-H_true);
 err2 = norm(err);
 err2rel = norm(err)/norm(H_true);
 
-%fprintf('2-norm error in TF estimates         : %.5e\n',err2)
 fprintf('Relative 2-norm error in TF estimates: %.5e\n',err2rel)
-if opts.der_order == 1
-    err_der = abs(Hz(:,2)-Hp_true);
-    err2D = norm(err_der);
-    err2relD = norm(err_der)/norm(Hp_true);
-    fprintf('Relative 2-norm error in Derivative TF estimates: %.5e\n',err2relD)
-end
+err_der = abs(Hz(:,2)-Hp_true);
+err2D = norm(err_der);
+err2relD = norm(err_der)/norm(Hp_true);
+fprintf('Relative 2-norm error in Derivative TF estimates: %.5e\n',err2relD)
 
-%plot value estimates on top of true
+%% Plot recovered transfer function values
 figure;
 loglog(freqs,abs(H_true),'LineWidth',2)
 hold on
@@ -65,7 +61,6 @@ legend('$|H(e^{\mathbf i \omega})|$',...
     '$|M_0(e^{\mathbf i \omega})|$','Interpreter',...
     'latex','Location','northwest')
 xlim([10^(-2),pi])
-%ylim([1e-1,1e3])
 ax = gca;
 Default_TW = ax.TickLength;
 Default_LW = ax.LineWidth;
@@ -76,7 +71,7 @@ xlabel('$\omega$','Interpreter','latex','FontSize',20)
 ylabel('Magnitude','Interpreter','latex','FontSize',20)
 text(2e-2,3e0,'(a)','FontSize',30)
 
-%plot derivative estimates on top of true
+%% Plot recovered derivative values
 figure;
 loglog(freqs,abs(Hp_true),'LineWidth',2)
 hold on
@@ -95,7 +90,7 @@ xlabel('$\omega$','Interpreter','latex','FontSize',20)
 ylabel('Magnitude','Interpreter','latex','FontSize',20)
 text(2e-2,5e1,'(c)','FontSize',30)
 
-% Plot error vs standard deviation
+%% Plot error vs standard deviation for value
 figure;
 relerr = abs(Hz(:,1)-H_true)./abs(H_true);
 loglog(freqs,relerr,'LineWidth',2)
@@ -115,7 +110,7 @@ xlabel('$\omega$','Interpreter','latex','FontSize',20)
 text(2e-2,2e-14,'(b)','FontSize',30)
 
 
-% Plot error vs standard deviation for derivative
+%% Plot error vs standard deviation for derivative
 figure;
 relerrp = abs(Hz(:,2)-Hp_true)./abs(Hp_true);
 loglog(freqs,relerrp,'LineWidth',2)
@@ -133,23 +128,3 @@ ax.LineWidth = Default_LW * 2;
 ax.FontSize = 16;
 xlabel('$\omega$','Interpreter','latex','FontSize',20)
 text(2e-2,7e-13,'(d)','FontSize',30)
-
-
-
-% % Plot the relative derivative
-% figure;
-% relder = abs(Hp_true)./abs(H_true);
-% loglog(freqs,relder,'LineWidth',2)
-% %legend('$\frac{H''(e^{\mathbf i \omega})}{H(e^{\mathbf i \omega})}$','Interpreter',...
-% %    'latex','Location','northwest')
-% xlim([10^(-2),pi])
-% ax = gca;
-% Default_TW = ax.TickLength;
-% Default_LW = ax.LineWidth;
-% ax.TickLength = Default_TW * 2;
-% ax.LineWidth = Default_LW * 2;
-% ax.FontSize = 16;
-% xlabel('$\omega$','Interpreter','latex','FontSize',20)
-% ylabel('$\frac{H''(e^{\mathbf i \omega})}{H(e^{\mathbf i \omega})}$','Interpreter',...
-%     'latex')
-
