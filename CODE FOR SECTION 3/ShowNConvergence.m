@@ -1,52 +1,51 @@
 
 load RandImagEx1.mat
+T = 1000;
+t_eval = 0:T;
 
-fs = 1e3;
-Ts = 1/fs;
-t_end = 1;
-
-t_eval = 0:Ts:t_end;
-T = length(t_eval);
-w = .5;
-U = multiCos(t_eval,fs,w);
-%U = FiltNoise(fs,t_end);
+rng(12345);
+U = randn(T+1,1);
 Y = runDTSys(A,B,C,D,U,t_eval);
 
+w = 0.5;
 z = exp(1i*w);
 
 I = eye(length(A));
 Hz_true = C*((z*I-A)\B);
 
 clear opts
-opts.tol = 10^(-5);
 opts.der_order = 0;
-opts.num_est = 1;
+opts.num_windows = 20;
+opts.num_windows_keep = 10;
+opts.tau2 = 10^-10;
 
 n_max = 200;
 n_skip = 1;
-n_start = 10;
+n_start = 20;
 n_vec = n_start:n_skip:n_max;
 num_n = length(n_vec);
 err_vec = nan(num_n,1);
+nstd_vec = nan(num_n,1);
 for k = 1:num_n
     opts.n = n_vec(k);
-    [Hz,nstd_Hz,cond_nums,residuals,Ls_vec,opts] = CalculateTFVals(U,Y,z,opts);
+    [Hz,nstd_Hz,cond_nums,residuals,opts] = CalculateTFVals(U,Y,z,opts);
     err_vec(k) = abs(Hz-Hz_true)/abs(Hz_true);
+    nstd_vec(k) = nstd_Hz;
+    opts = rmfield(opts,'W');
 end
 
 %%
-nhat = MOESP(U,Y);
-if isnan(nhat)
-    nhat = 83;
-end
+N = MOESP(U,Y);
 
-f=figure;
-%f.Position = [476 445 700 280];
+
+f = figure;
+f.Position = [476 445 700 280];
 semilogy(n_vec,err_vec,'LineWidth',2)
 hold on
-xline(nhat,'color','#D95319','LineWidth',2)
+semilogy(n_vec,nstd_vec,'LineWidth',2)
+xline(N,'color','#D95319','LineWidth',2)
 xline(100,'LineWidth',2)
-legend('$\epsilon_{rel}$','$\hat n$','$\tilde n = n$','interpreter','latex')
+legend('$\epsilon_{rel}$','$s_W$' ,'$N$','$n$','interpreter','latex')
 
 ax = gca;
 Default_TW = ax.TickLength;
@@ -60,9 +59,10 @@ ax.FontSize = 14;
 %xticks([1e-4,1e-3,1e-2,1e-1,1])
 %xticklabels({'10^{-4}','10^{-3}','10^{-2}','10^{-1}','1'})
 xlim([20,200])
-xlabel('$m$','interpreter','latex','fontsize',25)
+xlabel('$\tilde n$','interpreter','latex','fontsize',25)
 %labels
-ylabel('$|H_1(\sigma)-M_{0,m}(\sigma)|/|H_1(\sigma)|$','interpreter','latex','fontsize',20)
+% ylabel('$|H_1(\sigma)-M_{0}^{(\tilde n)}(\sigma)|/|H_1(\sigma)|$','interpreter','latex','fontsize',20)
+ylabel('$\epsilon_{rel}(\tilde n)$ and $s_W(\tilde n)$','interpreter','latex','fontsize',20)
 %lgd = legend();
 %lgd.Location = 'best';
 
@@ -72,7 +72,7 @@ S_MP = find(S/S(1)<10^(-13),1);
 f=figure;
 %f.Position = [476 445 700 280];
 semilogy(S/S(1),'-*','LineWidth',2)
-xline(nhat,'color','#D95319','LineWidth',2)
+xline(N,'color','#D95319','LineWidth',2)
 ax = gca;
 
 Default_TW = ax.TickLength;

@@ -3,43 +3,40 @@
 % Hankel matricies
 
 load RandImagEx1.mat
+n = length(A);
 
-fs = 1e3;
-Ts = 1/fs;
-t_end = 1;
+T = 3*n;
+t_eval = 0:T;
 
-t_eval = 0:Ts:t_end;
-T = length(t_eval);
-U = randn(T,1);
+%U = randn(T+1,1);
 Y = runDTSys(A,B,C,D,U,t_eval);
+%Y = Yt.*(1+(1e-8)*randn(length(Yt),1));
+%Y = Yt;
 w = 0.5;
 s = exp(w*1i);
-
-n = length(A);
 %% Compute Orthogonal Subspace
-t = 3*n;
-t_end = 1+t;
-U_i = U(1:t_end);
-Y_i = Y(1:t_end);
-
-Hu = HankMat(U_i,n);
-Hy = HankMat(Y_i,n);
-W = orth([Hu;Hy]);
-A = [Hu;Hy];
+Hu = HankMat(U,n);
+Hy = HankMat(Y,n);
+U_trunc = orth([Hu;Hy]);
+[U_full, ~, ~] = svd([Hu;Hy],'econ');
+G = [Hu;Hy];
 %% Get and plot results
 
 gamma_sig = calc_gamma(s,n,0);
-z = [zeros(n+1,1);gamma_sig];
+z = [zeros(n+1,1);-gamma_sig];
 
-Wz = [W z];
-Az = [A z];
+U_trunc_z = [U_trunc z];
+U_full_z = [U_full z];
+Gz = [G z];
 
 %This is better I think
-S1 = svd(Az);
-S2 = svd(Wz);
-no = length(S2);
-na = length(S1);
-%figure; semilogy(S1,'-*'); hold on; semilogy(S2,'-*')
+S1 = svd(Gz);
+S2 = svd(U_trunc_z);
+S3 = svd(U_full_z);
+
+n1 = length(S2);
+n2 = length(S1);
+n3 = length(S3);
 
 %% PLot
 ColorMat = [0 0.4470 0.7410;...
@@ -54,10 +51,13 @@ f.Position = [476 445 700 280];
 semilogy(S1,'Color',ColorMat(1,:),'LineWidth',2)
 hold on
 semilogy(S2,'Color',ColorMat(2,:),'LineWidth',2)
+semilogy(S3,'--','Color',ColorMat(3,:),'LineWidth',2)
 semilogy(1,S1(1),'o','Color',ColorMat(1,:),'MarkerSize',10,'LineWidth',1.5)
-semilogy(na,S1(na),'o','Color',ColorMat(1,:),'MarkerSize',10,'LineWidth',1.5)
+semilogy(n2,S1(n2),'o','Color',ColorMat(1,:),'MarkerSize',10,'LineWidth',1.5)
 semilogy(1,S2(1),'o','Color',ColorMat(2,:),'MarkerSize',10,'LineWidth',1.5)
-semilogy(no,S2(no),'o','Color',ColorMat(2,:),'MarkerSize',10,'LineWidth',1.5)
+semilogy(n1,S2(n1),'o','Color',ColorMat(2,:),'MarkerSize',10,'LineWidth',1.5)
+semilogy(1,S3(1),'*','Color',ColorMat(3,:),'MarkerSize',10,'LineWidth',1.5)
+semilogy(n3,S3(n3),'*','Color',ColorMat(3,:),'MarkerSize',10,'LineWidth',1.5)
 ax = gca;
 Default_TW = ax.TickLength;
 Default_LW = ax.LineWidth;
@@ -71,15 +71,19 @@ xlabel('$j$','interpreter','latex','fontsize',25)
 %set limits of plot
 %labels
 ylabel('Singular Value','interpreter','latex','fontsize',20)
-legend('$[\mathbf G_{\hat n,k}~\mathbf z]$','$[\mathbf U_k~\mathbf z]$','autoupdate','off','Interpreter','latex')
+legend('$[\mathbf G_{n}~\mathbf z(\sigma)]$',...
+    '$[\mathbf U_c~\mathbf z(\sigma)]$',...
+    '$[\mathbf U~\mathbf z(\sigma)]$',...
+    'autoupdate','off','Interpreter','latex','Location','southwest')
 % xlabel('$r$','interpreter','latex','fontsize',30)
 ylim([10^-(17),10^(5)])
 xlim([-5,205])
 
 %% Report singular values
-fprintf('Max S val, Min S val\n')
-fprintf('Orthogonalized max: %e, Orthogonalized min: %e\n',S2(1),S2(end))
-fprintf('Not orthogonalized max: %e, Not orthogonalized min: %e\n',S1(1),S1(end))
+fprintf('-----Condition Numbers------\n')
+fprintf('[G_n  z]:  %e\n',S1(1)/S1(end))
+fprintf('[U_c  z]:  %e\n',S2(1)/S2(end))
+fprintf('[U  z]:    %e\n',S3(1)/S3(end))
 
 
 

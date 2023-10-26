@@ -3,18 +3,23 @@
 
 %% construct data to use to find estimates of transfer function values
 load RandEx1.mat
-T = 1000;
-t_eval = 0:T;
 
-%U = randn(T+1,1);
+fs = 1e4;
+Ts = 1/fs;
+t_end = 1;
+t_eval = 0:Ts:t_end;
+T = length(t_eval);
+%U = randn(T,1);
 %Y = runDTSys(A,B,C,D,U,t_eval);
-%load ../Data_Files/ReproduceLowWindowOK.mat
-load ../Data_Files/ReproduceLowWindowOK2.mat
+load ../Data_Files/ReproduceLowWindowOK.mat
+
 %% set up
-num_est_vec = [10,20,30,70,150];
-num_trial = length(num_est_vec);
+%num_win_vec = [2,5,10,30,70];
+num_win_vec = [2,5,10,15,20];
+num_trial = length(num_win_vec);
 H_true = @(s) C*((s*eye(length(A))-A)\B);
 
+%w = .01;
 w = 10^-2;
 z = exp(1i*w);
 norm_std_vec = NaN(num_trial,1);
@@ -24,8 +29,8 @@ for i = 1:num_trial
     clear opts
     opts.der_order = 0;
     opts.n = 100;
-    opts.num_windows_keep = 10;
-    opts.num_windows = num_est_vec(i);
+    opts.num_windows_keep = num_win_vec(i);
+    opts.num_windows = 20;
     [Hz,nstd_Hz,cond_nums,residuals] = CalculateTFVals(U,Y,z,opts);
     norm_std_vec(i) = abs(nstd_Hz*Hz); %unnormalize
     Hs_vec(i) = Hz;
@@ -46,11 +51,11 @@ leg{1} = '$H_0(\sigma)$';
 hold on
 plot(norm_std_vec(1)*param + Hs_vec(1),'Color',ColorMat(1,:),'LineWidth',2)
 abs_err_vec(1) = abs(Hs_true-Hs_vec(1));
-leg{2} = strcat('$K = $',num2str(num_est_vec(1)));
+leg{2} = strcat('$K = $',num2str(num_win_vec(1)));
 for i = 2:num_trial
     plot(norm_std_vec(i)*param + Hs_vec(i),'Color',ColorMat(i,:),'LineWidth',2)
     abs_err_vec(i) = abs(Hs_true-Hs_vec(i));
-    leg{i+1} = strcat('$K = $',num2str(num_est_vec(i)));
+    leg{i+1} = strcat('$K = $',num2str(num_win_vec(i)));
 end
 for i = 1:num_trial
     plot(Hs_vec(i),'*','Color',ColorMat(i,:),'MarkerSize',10)
@@ -90,7 +95,3 @@ xticklabels({strcat('$-10^{',max_abs_err_str,'}$'),'$0$',strcat('$10^{',max_abs_
 lgd = legend();
 lgd.Location = 'EastOutside';
 %axis equal
-
-
-
-
