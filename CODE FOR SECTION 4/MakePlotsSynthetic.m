@@ -1,4 +1,4 @@
-% Script to make plots for the synthetic random example
+% Script to make plot
 
 load Rand1000.mat
 n_true = length(A);

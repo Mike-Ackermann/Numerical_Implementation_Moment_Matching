@@ -1,18 +1,15 @@
-%Plots errors in only Loewner, Hermite Loewner, approximations using
-%Estimated TF values.  This is for a chosen, fixed r.
+% Script to reproduce plots 8(a-d) and Table 3.
 
 %% construct data to use to find estimates of transfer function values
 fprintf('Generating data...\n')
 load Penzl_disc.mat
 n_true = length(A);
 rng(9876576)
-%rng(987657656)
 
 T = 10000;
 t_eval = 0:T;
 U = randn(T+1,1);
 Y = runDTSys(A,B,C,D,U,t_eval);
-% load Reproduce_Penzl.mat
 
 red = 14;
 freqs = logspace(-5,log10(.99*pi),10*red);
@@ -55,11 +52,8 @@ HzHz = HzHz([idx2;idx2+length(z)]);
 %Hermite Loewner
 epsilon = 1e-8;
 [Ap1,Bp1,Cp1,Ep1] = HermiteLoewner(z_WC,Hz_WC(:,1),Hz_WC(:,2),red,epsilon);
-% [Ap1,Bp1,Cp1,Ep1] = HermiteLoewner(z_WC(1:end/4),Hz_WC(1:end/4,1),Hz_WC(1:end/4,2),red,epsilon);
 
 %Loewner
-
-
 [Ap2,Bp2,Cp2,Ep2] = Loewner_sylvester(zz,HzHz(:,1),red,epsilon);
 
 % Vector Fitting
@@ -69,9 +63,9 @@ eval_freqs = eval_freqs(idx);
 opts2.spy1=0; opts2.spy2=0; opts2.cmplx_ss = 0;
 n_iter = 100;
 tolVF = 1e-10;
+% weight is 4-th root of standard deviation
 weights = (1./sqrt(sqrt(nstd_WC)))';
 initl_poles = .99*exp(1i*logspace(-3.5,pi,red/2));
-%initl_poles = .7*exp(1i*logspace(-3.5,pi,red/2));
 initl_poles = [initl_poles, conj(initl_poles)];
 initl_poles = sort(initl_poles,'ComparisonMethod','real');
 count_VF = 0;
@@ -134,26 +128,22 @@ if max(abs(eig(sysd_Low))) >= 1
     [sysd_Low, Gus] = stabsep(sysd_Low);
     fprintf('Low was unstable!!!\n')
     fprintf('Stable Low dim: %d\n',length(sysd_Low.A))
-    %fprintf('Hinf unstable part: %e\n',norm(Gus,'inf'));
 end
 if max(abs(eig(sysd_Lowt))) >= 1
     [sysd_Lowt, Gus] = stabsep(sysd_Lowt);
     fprintf('Low true was unstable!!!\n')
     fprintf('Stable Low true dim: %d\n',length(sysd_Lowt.A))
-    %fprintf('Hinf unstable part: %e\n',norm(Gus,'inf'));
 end
 if max(abs(eig(sysd_HerLow))) >= 1
     sysd_HerLow_Full = sysd_HerLow;
     [sysd_HerLow, Gus] = stabsep(sysd_HerLow);
     fprintf('HerLow was unstable!!!\n')
     fprintf('Stable HerLow dim: %d\n',length(sysd_HerLow.A))
-    %fprintf('Hinf unstable part: %e\n',norm(Gus,'inf'));
 end
 if max(abs(eig(sysd_HerLowt))) >= 1
     [sysd_HerLowt, Gus] = stabsep(sysd_HerLowt);
     fprintf('HerLow true was unstable!!!\n')
     fprintf('Stable HerLow true dim: %d\n',length(sysd_HerLowt.A))
-    %fprintf('Hinf unstable part: %e\n',norm(Gus,'inf'));
 end
 %% Calculate values and errors on unit circle
 fprintf('Calculating errors...\n')
@@ -185,8 +175,7 @@ fprintf('2- norm relative error in recovered values:     %e\n',err_interp)
 fprintf('2-norm relative error in recovered derivatives: %e\n',err_interp_der)
 fprintf('Maximum pointwise realative error in recovered values:      %e\n',max(abs((Hz_WC(:,1)-H_interp_true)./H_interp_true)))
 fprintf('Maximum pointwise realative error in recovered derivatives: %e\n',max(abs((Hz_WC(:,2)-Hp_true)./Hp_true)))
-%% plot bode plot from estimated data
-%plot bode plot from estimated data
+%% plot frequency response of ROMs made from estimated data
 load ColorMat.mat
 
 figure
@@ -201,27 +190,21 @@ legend('$H$','$\hat H_{\texttt{VF}}$','$\hat H_{\texttt{LH}}$','$\hat H_{\texttt
 ax = gca;
 Default_TW = ax.TickLength;
 Default_LW = ax.LineWidth;
-%double tick width and length
 ax.TickLength = Default_TW * 2;
 ax.LineWidth = Default_LW * 2;
-%change font size
 ax.FontSize = 14;
-%specify tick location and labels
 xticks([1e-5,1e-3,1e-1,pi])
 xticklabels({'10^{-5}','10^{-3}','10^{-1}','\pi'})
 xlabel('$\omega$','interpreter','latex','fontsize',25)
-%set limits of plot
 xlim([1e-5,pi])
 ylim([10^(-1.5),1e2])
-%labels
 ylabel('$|\hat H_{\texttt X}(e^{\mathbf i \omega})|$','interpreter','latex','fontsize',20)
 lgd = legend();
 lgd.Location = 'northwest';
 text(2e-5,.7e-1,'(a)','FontSize',30)
 
 
-%% plot errors from estiamted data
-%plot errors from estiamted data
+%% Plot errors of ROMs made from estiamted data
 figure
 loglog(freqs_plot, err_VF,'LineWidth',2)
 hold on
@@ -233,27 +216,20 @@ legend('$\hat H_{\texttt{VF}}$','$\hat H_{\texttt{LH}}$','$\hat H_{\texttt{L}}$'
 ax = gca;
 Default_TW = ax.TickLength;
 Default_LW = ax.LineWidth;
-%double tick width and length
 ax.TickLength = Default_TW * 2;
 ax.LineWidth = Default_LW * 2;
-%change font size
 ax.FontSize = 14;
-%specify tick location and labels
 xticks([1e-5,1e-3,1e-1,pi])
 xticklabels({'10^{-5}','10^{-3}','10^{-1}','\pi'})
-%set limits of plot
 xlabel('$\omega$','interpreter','latex','fontsize',25)
 xlim([1e-5,pi])
-%labels
-%ylabel('$|H(e^{\mathbf i \omega})-\hat H_r^x(e^{\mathbf i \omega})|/|H(e^{\mathbf i \omega})|$','interpreter','latex','fontsize',20)
 ylabel('$\epsilon_{rel}$','interpreter','latex','fontsize',20)
 lgd = legend();
 lgd.Location = 'northwest';
 text(2e-5,5e-6,'(b)','FontSize',30)
 
 
-%% plot bode plot from true data
-%plot bode plot from estimated data
+%% Plot frequency response of ROMs made from true data
 figure
 loglog(freqs_plot,abs(H_true),'k','LineWidth',2)
 hold on
@@ -266,28 +242,21 @@ legend('$H$','$\tilde H_{\texttt{VF}}$','$\tilde H_{\texttt{LH}}$','$\tilde H_{\
 ax = gca;
 Default_TW = ax.TickLength;
 Default_LW = ax.LineWidth;
-%double tick width and length
 ax.TickLength = Default_TW * 2;
 ax.LineWidth = Default_LW * 2;
-%change font size
 ax.FontSize = 14;
-%specify tick location and labels
 xticks([1e-5,1e-3,1e-1,pi])
 xticklabels({'10^{-5}','10^{-3}','10^{-1}','\pi'})
 xlabel('$\omega$','interpreter','latex','fontsize',25)
-%set limits of plot
 xlim([1e-5,pi])
 ylim([10^(-1.5),1e2])
-
-%labels
 ylabel('$|\tilde H_{\texttt X}(e^{\mathbf i \omega})|$','interpreter','latex','fontsize',20)
 lgd = legend();
 lgd.Location = 'northwest';
 text(2e-5,.7e-1,'(c)','FontSize',30)
 
 
-%% plot errors from true data
-%plot errors from estiamted data
+%% Plot errors of ROMs made from true data
 figure
 loglog(freqs_plot, err_VFt,'LineWidth',2)
 hold on
@@ -299,19 +268,13 @@ legend('$\tilde H_{\texttt{VF}}$','$\tilde H_{\texttt{LH}}$','$\tilde H_{\texttt
 ax = gca;
 Default_TW = ax.TickLength;
 Default_LW = ax.LineWidth;
-%double tick width and length
 ax.TickLength = Default_TW * 2;
 ax.LineWidth = Default_LW * 2;
-%change font size
 ax.FontSize = 14;
-%specify tick location and labels
 xticks([1e-5,1e-3,1e-1,pi])
 xticklabels({'10^{-5}','10^{-3}','10^{-1}','\pi'})
 xlabel('$\omega$','interpreter','latex','fontsize',25)
-%set limits of plot
 xlim([1e-5,pi])
-%labels
-%ylabel('$|H(e^{\mathbf i \omega})-\tilde H_r^x(e^{\mathbf i \omega})|/|H(e^{\mathbf i \omega})|$','interpreter','latex','fontsize',20)
 ylabel('$\epsilon_{rel}$','interpreter','latex','fontsize',20)
 lgd = legend();
 lgd.Location = 'northwest';

@@ -1,5 +1,5 @@
-%Constructs ROMs to the fully discretized heat model and compares 
-
+% Script to produce Table 2.  Also compares the ROM outputs on a sawtooth
+% input.
 
 %% construct data to use to find estimates of transfer function values
 fprintf('Generating data...\n')
@@ -14,7 +14,6 @@ T = 1000;
 t_eval = 0:T;
 U = randn(T+1,1);
 Y = runDTSys(A,B,C,D,U,t_eval);
-% load Reproduce_HeatModel.mat
 
 red = 10;
 num = 50*red;
@@ -68,7 +67,6 @@ opts2.spy1=0; opts2.spy2=0; opts2.cmplx_ss = 0;
 n_iter = 100;
 tolVF = 1e-5;
 weights = ones(1,num*2); %dont weight
-%initl_poles = 1*exp((1:red)*2*pi*1i/red); %set initial poles inside upper unit circle
 initl_poles = exp(1i*logspace(-1,pi,red/2));
 initl_poles = [initl_poles, conj(initl_poles)];
 initl_poles = sort(initl_poles,'ComparisonMethod','real');
@@ -133,29 +131,25 @@ if max(abs(eig(sysd_Low))) >= 1
     [sysd_Low, Gus] = stabsep(sysd_Low);
     fprintf('Low was unstable!!!\n')
     fprintf('Stable Low dim: %d\n',length(sysd_Low.A))
-    %fprintf('Hinf unstable part: %e\n',norm(Gus,'inf'));
 end
 if max(abs(eig(sysd_Lowt))) >= 1
     [sysd_Lowt, Gus] = stabsep(sysd_Lowt);
     fprintf('Low true was unstable!!!\n')
     fprintf('Stable Low true dim: %d\n',length(sysd_Lowt.A))
-    %fprintf('Hinf unstable part: %e\n',norm(Gus,'inf'));
 end
 if max(abs(eig(sysd_HerLow))) >= 1
     [sysd_HerLow, Gus] = stabsep(sysd_HerLow);
     fprintf('HerLow was unstable!!!\n')
     fprintf('Stable HerLow dim: %d\n',length(sysd_HerLow.A))
-    %fprintf('Hinf unstable part: %e\n',norm(Gus,'inf'));
 end
 if max(abs(eig(sysd_HerLowt))) >= 1
     [sysd_HerLowt, Gus] = stabsep(sysd_HerLowt);
     fprintf('HerLow true was unstable!!!\n')
     fprintf('Stable HerLow true dim: %d\n',length(sysd_HerLowt.A))
-    %fprintf('Hinf unstable part: %e\n',norm(Gus,'inf'));
 end
 %% Calculate values and errors on unit circle
 fprintf('Calculating errors...\n')
-%Print errors in learned transfer function values
+%Print errors in recovered transfer function values
 freqs_used = freqs/Ts;
 err_interp = norm(Hz_WC(:,1)-H_interp_true)./norm(H_interp_true);
 err_interp_der = norm(Hz_WC(:,2)-Hp_true)./norm(Hp_true);
@@ -168,7 +162,6 @@ fprintf('Maximum pointwise error in recovered derivatives: %e\n',max(abs((Hz_WC(
 %% Calculate trajectory for input to compare
 t_eval_test = 0:(1e-3):1;
 U_comp = sawtooth(2*pi*10*t_eval_test);
-%U_comp = chirp(t_eval,1e-3,t_end,fs/10,'linear');
 
 Y_true = runDTSys(A,B,C,D,U_comp,t_eval_test);
 Y_low = runDTSys(Ep2\Ap2,Ep2\Bp2,Cp2,D,U_comp,t_eval_test);
@@ -176,8 +169,6 @@ Y_Hlow = runDTSys(Ep1\Ap1,Ep1\Bp1,Cp1,D,U_comp,t_eval_test);
 Y_VF = runDTSys(Avf,Bvf,Cvf,D,U_comp,t_eval_test);
 
 %% Plot output responses
-%plot bode plot from estimated data
-%need to make freqs be in [-log_min_freq, pi)
 
 load ColorMat.mat
 
@@ -193,10 +184,8 @@ legend('$Y$','$\hat Y_{\texttt{VF}}$','$\hat Y_{\texttt{L}}$','$\hat Y_{\texttt{
 ax = gca;
 Default_TW = ax.TickLength;
 Default_LW = ax.LineWidth;
-%double tick width and length
 ax.TickLength = Default_TW * 2;
 ax.LineWidth = Default_LW * 2;
-%change font size
 ax.FontSize = 14;
 xlabel('time (seconds)','interpreter','latex','fontsize',25)
 ylabel('$\hat Y_x[t]$','interpreter','latex','fontsize',20)
@@ -210,7 +199,6 @@ err_Low = Y_low-Y_true;
 err_Hlow = Y_Hlow-Y_true;
 
 load ColorMat.mat
-%plot errors from estiamted data
 figure
 plot(t_eval_test, err_VF,'LineWidth',2)
 hold on
@@ -222,14 +210,10 @@ legend('$\hat Y_{\texttt{VF}}$','$\hat Y_{\texttt{L}}$','$\hat Y_{\texttt{LH}}$'
 ax = gca;
 Default_TW = ax.TickLength;
 Default_LW = ax.LineWidth;
-%double tick width and length
 ax.TickLength = Default_TW * 2;
 ax.LineWidth = Default_LW * 2;
-%change font size
 ax.FontSize = 14;
 xlabel('time (seconds)','interpreter','latex','fontsize',25)
-%ylim([-2.5e-9,1.8e-9])
-%yticks([-2,-1,0,1]*1e-9)
 ylabel('$Y[t]-\hat Y_x[t]$','interpreter','latex','fontsize',20)
 lgd = legend();
 lgd.Location = 'south';
