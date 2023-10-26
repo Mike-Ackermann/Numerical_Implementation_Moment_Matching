@@ -159,8 +159,10 @@ fprintf('Calculating errors...\n')
 freqs_used = freqs/Ts;
 err_interp = norm(Hz_WC(:,1)-H_interp_true)./norm(H_interp_true);
 err_interp_der = norm(Hz_WC(:,2)-Hp_true)./norm(Hp_true);
-fprintf('Error in learned transfer function values:      %e\n',err_interp)
-fprintf('Error in learned transfer function derivatives: %e\n',err_interp_der)
+fprintf('2- norm relative error in recovered values:     %e\n',err_interp)
+fprintf('2-norm relative error in recovered derivatives: %e\n',err_interp_der)
+fprintf('Maximum pointwise error in recovered values:      %e\n',max(abs((Hz_WC(:,1)-H_interp_true))))
+fprintf('Maximum pointwise error in recovered derivatives: %e\n',max(abs((Hz_WC(:,2)-Hp_true))))
 
 
 %% Calculate trajectory for input to compare

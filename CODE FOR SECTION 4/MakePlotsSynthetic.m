@@ -65,6 +65,7 @@ legend('$|H(e^{\mathbf i \omega})|$',...
     '$|M_0(e^{\mathbf i \omega})|$','Interpreter',...
     'latex','Location','northwest')
 xlim([10^(-2),pi])
+%ylim([1e-1,1e3])
 ax = gca;
 Default_TW = ax.TickLength;
 Default_LW = ax.LineWidth;
@@ -73,6 +74,7 @@ ax.LineWidth = Default_LW * 2;
 ax.FontSize = 16;
 xlabel('$\omega$','Interpreter','latex','FontSize',20)
 ylabel('Magnitude','Interpreter','latex','FontSize',20)
+text(2e-2,3e0,'(a)','FontSize',30)
 
 %plot derivative estimates on top of true
 figure;
@@ -91,6 +93,7 @@ ax.LineWidth = Default_LW * 2;
 ax.FontSize = 16;
 xlabel('$\omega$','Interpreter','latex','FontSize',20)
 ylabel('Magnitude','Interpreter','latex','FontSize',20)
+text(2e-2,5e1,'(c)','FontSize',30)
 
 % Plot error vs standard deviation
 figure;
@@ -101,6 +104,7 @@ loglog(freqs,nstd_Hz(:,1),'LineWidth',2)
 legend('$\epsilon_{rel}$','$s_W$','Interpreter',...
     'latex','Location','northwest')
 xlim([10^(-2),pi])
+ylim([1e-15,1e-6])
 ax = gca;
 Default_TW = ax.TickLength;
 Default_LW = ax.LineWidth;
@@ -108,6 +112,8 @@ ax.TickLength = Default_TW * 2;
 ax.LineWidth = Default_LW * 2;
 ax.FontSize = 16;
 xlabel('$\omega$','Interpreter','latex','FontSize',20)
+text(2e-2,2e-14,'(b)','FontSize',30)
+
 
 % Plot error vs standard deviation for derivative
 figure;
@@ -118,6 +124,7 @@ loglog(freqs,nstd_Hz(:,2),'LineWidth',2)
 legend('$\epsilon_{rel}$','$s_W$','Interpreter',...
     'latex','Location','northwest')
 xlim([10^(-2),pi])
+ylim([1e-13,1e-6])
 ax = gca;
 Default_TW = ax.TickLength;
 Default_LW = ax.LineWidth;
@@ -125,6 +132,7 @@ ax.TickLength = Default_TW * 2;
 ax.LineWidth = Default_LW * 2;
 ax.FontSize = 16;
 xlabel('$\omega$','Interpreter','latex','FontSize',20)
+text(2e-2,7e-13,'(d)','FontSize',30)
 
 
 
